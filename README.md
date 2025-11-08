@@ -25,7 +25,7 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 
 ```bash
 cd /opt
-git clone <repository-url> linux-update-script
+git clone <https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux.git> linux-update-script
 cd linux-update-script
 ```
 
@@ -153,11 +153,20 @@ Alle Updates werden in Logdateien mit Zeitstempel gespeichert:
 
 Neueste Logdatei anzeigen:
 ```bash
+./log_view_new.sh
+```
+# oder
+```bash
 ls -lt /var/log/system-updates/ | head -n 2
 cat /var/log/system-updates/update_*.log
 ```
 
 Letzte 50 Zeilen des neuesten Logs:
+```bash
+./log_view_new50.sh
+```
+
+# oder
 ```bash
 tail -n 50 /var/log/system-updates/$(ls -t /var/log/system-updates/ | head -n 1)
 ```
@@ -267,7 +276,7 @@ Bei Problemen oder Fragen:
 
 ## Changelog
 
-### Version 1.0.0 (2025-11-04)
+### Version 1.0.0 (2025-11-06)
 - Initiale Veröffentlichung
 - Unterstützung für Debian, Ubuntu, Mint, RHEL, Fedora, SUSE
 - E-Mail-Benachrichtigung
