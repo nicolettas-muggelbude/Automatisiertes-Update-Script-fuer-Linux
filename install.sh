@@ -73,9 +73,9 @@ ask_input() {
     local answer
 
     if [ -n "$default" ]; then
-        echo -ne "${YELLOW}$question [$default]:${NC} "
+        echo -ne "${YELLOW}$question [$default]:${NC} " >&2
     else
-        echo -ne "${YELLOW}$question:${NC} "
+        echo -ne "${YELLOW}$question:${NC} " >&2
     fi
 
     read answer
@@ -117,33 +117,44 @@ create_config() {
         echo
     fi
 
-    # Log-Verzeichnis
-    log_dir=$(ask_input "Log-Verzeichnis" "$log_dir")
-
     # E-Mail-Benachrichtigung
     if ask_yes_no "E-Mail-Benachrichtigung aktivieren?" "n"; then
         enable_email="true"
+        echo
 
         # E-Mail-Adresse abfragen
         while true; do
             email_recipient=$(ask_input "E-Mail-Adresse für Benachrichtigungen" "$email_recipient")
             if [ -n "$email_recipient" ]; then
+                echo
+                print_info "E-Mail-Adresse gespeichert: $email_recipient"
                 break
             else
+                echo
                 print_error "E-Mail-Adresse darf nicht leer sein"
             fi
         done
 
         # Mail-Programm prüfen
+        echo
         if ! command -v mail &> /dev/null && ! command -v sendmail &> /dev/null; then
-            print_warning "Kein Mail-Programm gefunden (mail/sendmail)"
-            echo "Installiere 'mailutils' (Debian/Ubuntu) oder 'mailx' (RHEL/Fedora)"
             echo
-            if ask_yes_no "Möchtest du fortfahren?" "y"; then
-                :
+            print_warning "Kein Mail-Programm gefunden (mail/sendmail)"
+            echo
+            echo "Für E-Mail-Benachrichtigungen wird ein Mail-Programm benötigt:"
+            echo "  - Debian/Ubuntu/Mint: sudo apt install mailutils"
+            echo "  - RHEL/Fedora: sudo dnf install mailx"
+            echo "  - openSUSE: sudo zypper install mailx"
+            echo
+            echo "Du kannst das Programm jetzt installieren oder später nachrüsten."
+            echo
+            if ask_yes_no "Trotzdem mit E-Mail-Benachrichtigung fortfahren?" "y"; then
+                print_info "E-Mail-Benachrichtigung aktiviert (Mail-Programm muss noch installiert werden)"
             else
                 enable_email="false"
+                print_info "E-Mail-Benachrichtigung deaktiviert"
             fi
+            echo
         fi
     else
         enable_email="false"
@@ -155,6 +166,14 @@ create_config() {
         print_warning "System wird automatisch neu gestartet, wenn Updates dies erfordern!"
     else
         auto_reboot="false"
+    fi
+
+    # Log-Verzeichnis (optional, erweiterte Einstellung)
+    echo
+    print_info "Standard Log-Verzeichnis: $log_dir"
+    if ask_yes_no "Möchtest du das Log-Verzeichnis ändern?" "n"; then
+        log_dir=$(ask_input "Neues Log-Verzeichnis" "$log_dir")
+        print_info "Log-Verzeichnis geändert auf: $log_dir"
     fi
 
     # Konfigurationsdatei schreiben
@@ -180,12 +199,29 @@ EOF
 
     # Log-Verzeichnis erstellen
     if [ ! -d "$log_dir" ]; then
+        # Erst ohne sudo versuchen
         if mkdir -p "$log_dir" 2>/dev/null; then
             print_info "Log-Verzeichnis erstellt: $log_dir"
         else
-            print_warning "Log-Verzeichnis konnte nicht erstellt werden (root-Rechte benötigt)"
-            print_info "Wird beim ersten Ausführen des Update-Scripts erstellt"
+            # Benötigt root-Rechte
+            print_warning "Log-Verzeichnis benötigt root-Rechte: $log_dir"
+            echo
+            if ask_yes_no "Soll das Log-Verzeichnis jetzt mit sudo angelegt werden?" "y"; then
+                if sudo mkdir -p "$log_dir" 2>/dev/null; then
+                    print_info "Log-Verzeichnis erfolgreich erstellt: $log_dir"
+                    # Berechtigungen setzen, damit Logs lesbar sind
+                    sudo chmod 755 "$log_dir" 2>/dev/null
+                else
+                    print_error "Fehler beim Erstellen des Log-Verzeichnisses"
+                    print_info "Wird beim ersten Ausführen von 'sudo ./update.sh' erstellt"
+                fi
+            else
+                print_info "Log-Verzeichnis wird beim ersten Update-Durchlauf erstellt"
+            fi
+            echo
         fi
+    else
+        print_info "Log-Verzeichnis existiert bereits: $log_dir"
     fi
 }
 
@@ -199,6 +235,13 @@ setup_cron() {
         return
     fi
 
+    # Log-Verzeichnis aus Config laden
+    local log_dir="/var/log/system-updates"
+    if [ -f "$CONFIG_FILE" ]; then
+        source "$CONFIG_FILE"
+        log_dir="${LOG_DIR:-/var/log/system-updates}"
+    fi
+
     echo
     echo "Wähle die Häufigkeit:"
     echo "  1) Täglich um 3:00 Uhr"
@@ -210,28 +253,43 @@ setup_cron() {
 
     local choice
     choice=$(ask_input "Auswahl [1-5]" "1")
+    # Whitespace entfernen und nur erste Zeile nehmen
+    choice=$(echo "$choice" | head -n 1 | tr -d ' \t\n\r')
 
+    echo
     local cron_schedule=""
     case "$choice" in
         1)
             cron_schedule="0 3 * * *"
-            print_info "Täglich um 3:00 Uhr"
+            echo
+            print_info "Gewählt: Täglich um 3:00 Uhr"
             ;;
         2)
             cron_schedule="0 3 * * 0"
-            print_info "Wöchentlich (Sonntag, 3:00 Uhr)"
+            echo
+            print_info "Gewählt: Wöchentlich (Sonntag, 3:00 Uhr)"
             ;;
         3)
             cron_schedule="0 3 1 * *"
-            print_info "Monatlich (1. des Monats, 3:00 Uhr)"
+            echo
+            print_info "Gewählt: Monatlich (1. des Monats, 3:00 Uhr)"
             ;;
         4)
             echo
             echo "Cron-Format: Minute Stunde Tag Monat Wochentag"
             echo "Beispiel: 0 3 * * * (Täglich um 3:00 Uhr)"
+            echo
             cron_schedule=$(ask_input "Cron-Schedule")
+            if [ -n "$cron_schedule" ]; then
+                print_info "Benutzerdefinierter Schedule: $cron_schedule"
+            fi
             ;;
-        5|*)
+        5)
+            print_info "Cron-Job-Einrichtung übersprungen"
+            return
+            ;;
+        *)
+            print_error "Ungültige Auswahl: '$choice'"
             print_info "Cron-Job-Einrichtung übersprungen"
             return
             ;;
@@ -242,31 +300,40 @@ setup_cron() {
         return
     fi
 
-    # Cron-Job hinzufügen
+    # Cron-Job hinzufügen (im root-Crontab, da Update-Script root-Rechte benötigt)
     local cron_command="$cron_schedule $UPDATE_SCRIPT >> $log_dir/cron.log 2>&1"
     local cron_comment="# Automatisches System-Update"
 
+    echo
+    print_info "Der Cron-Job wird im root-Crontab eingerichtet (benötigt sudo)..."
+    echo
+
     # Prüfen ob bereits vorhanden
-    if crontab -l 2>/dev/null | grep -q "$UPDATE_SCRIPT"; then
-        print_warning "Cron-Job bereits vorhanden"
+    if sudo crontab -l 2>/dev/null | grep -q "$UPDATE_SCRIPT"; then
+        print_warning "Cron-Job bereits im root-Crontab vorhanden"
         if ask_yes_no "Möchtest du den bestehenden Cron-Job ersetzen?" "y"; then
             # Alten Eintrag entfernen
-            crontab -l 2>/dev/null | grep -v "$UPDATE_SCRIPT" | crontab -
+            sudo crontab -l 2>/dev/null | grep -v "$UPDATE_SCRIPT" | sudo crontab -
         else
             return
         fi
     fi
 
     # Neuen Cron-Job hinzufügen
-    (crontab -l 2>/dev/null; echo "$cron_comment"; echo "$cron_command") | crontab -
+    (sudo crontab -l 2>/dev/null; echo "$cron_comment"; echo "$cron_command") | sudo crontab -
 
     if [ $? -eq 0 ]; then
         print_info "Cron-Job erfolgreich eingerichtet"
         echo
-        echo "Aktueller Cron-Job:"
-        crontab -l | grep -A1 "Automatisches System-Update"
+        echo "Aktueller root-Cron-Job:"
+        sudo crontab -l | grep -A1 "Automatisches System-Update"
     else
         print_error "Fehler beim Einrichten des Cron-Jobs"
+        echo
+        print_warning "Manuell einrichten mit: sudo crontab -e"
+        echo "Dann folgende Zeilen hinzufügen:"
+        echo "$cron_comment"
+        echo "$cron_command"
     fi
 }
 
