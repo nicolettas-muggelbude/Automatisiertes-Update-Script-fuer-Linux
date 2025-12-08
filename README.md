@@ -1,5 +1,11 @@
 # Linux Update-Script
 
+[![Version](https://img.shields.io/github/v/release/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux?label=Version)](https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/releases)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![ShellCheck](https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/actions/workflows/shellcheck.yml)
+[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![GitHub Stars](https://img.shields.io/github/stars/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux?style=social)](https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/stargazers)
+
 Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optionaler E-Mail-Benachrichtigung und detailliertem Logging.
 
 ## Unterstützte Distributionen
@@ -7,6 +13,7 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 - **Debian-basiert**: Debian, Ubuntu, Linux Mint
 - **RedHat-basiert**: RHEL, CentOS, Fedora, Rocky Linux, AlmaLinux
 - **SUSE-basiert**: openSUSE (Leap/Tumbleweed), SLES
+- **Arch-basiert**: Arch Linux, Manjaro, EndeavourOS, Garuda Linux, ArcoLinux
 
 ## Features
 
@@ -144,29 +151,63 @@ nano config.conf
 
 ### Voraussetzungen
 
-Für E-Mail-Benachrichtigungen muss eines der folgenden Programme installiert sein:
+Für E-Mail-Benachrichtigungen benötigst du:
+
+1. **Mail-Client** (mail oder mailx)
+2. **MTA (Mail Transfer Agent)** wie postfix, ssmtp oder sendmail
 
 **Debian/Ubuntu/Mint:**
 ```bash
+# Mail-Client installieren
 sudo apt-get install mailutils
+
+# Einfacher MTA (ssmtp für Gmail, etc.)
+sudo apt-get install ssmtp
+# Dann /etc/ssmtp/ssmtp.conf konfigurieren
+
+# ODER vollwertiger MTA
+sudo apt-get install postfix
 ```
 
 **RHEL/Fedora/CentOS:**
 ```bash
+# Mail-Client installieren
 sudo dnf install mailx
-# oder
-sudo yum install mailx
+
+# Einfacher MTA
+sudo dnf install ssmtp
+
+# ODER vollwertiger MTA
+sudo dnf install postfix
 ```
 
 **openSUSE/SUSE:**
 ```bash
 sudo zypper install mailx
+sudo zypper install postfix
+```
+
+**Arch Linux/Manjaro:**
+```bash
+# Mail-Client installieren
+sudo pacman -S mailutils
+
+# Einfacher MTA
+sudo pacman -S ssmtp
+
+# ODER vollwertiger MTA
+sudo pacman -S postfix
 ```
 
 ### E-Mail-Konfiguration testen
 
 ```bash
 echo "Test-Nachricht" | mail -s "Test" deine-admin@domain.de
+```
+
+**Wichtig:** Wenn du die Fehlermeldung "Cannot start /usr/sbin/sendmail" siehst, ist kein MTA installiert oder konfiguriert. Das Script wird dich dann warnen:
+```
+[WARNUNG] E-Mail konnte nicht gesendet werden (MTA nicht konfiguriert?)
 ```
 
 ## Logging
@@ -227,6 +268,21 @@ cat /etc/os-release
 
 ### Problem: E-Mail wird nicht versendet
 
+**Fehlermeldung: "Cannot start /usr/sbin/sendmail"**
+
+Dies bedeutet, dass kein MTA (Mail Transfer Agent) installiert ist.
+
+**Lösung:**
+```bash
+# Option 1: Einfacher MTA (ssmtp für Gmail, etc.)
+sudo apt install ssmtp
+sudo nano /etc/ssmtp/ssmtp.conf
+
+# Option 2: Vollwertiger MTA
+sudo apt install postfix
+# Während Installation: "Internet Site" wählen
+```
+
 **Überprüfungen:**
 1. Ist `mailutils` oder `mailx` installiert?
    ```bash
@@ -234,14 +290,27 @@ cat /etc/os-release
    which sendmail
    ```
 
-2. Ist die E-Mail-Adresse korrekt in `config.conf`?
+2. Ist ein MTA installiert?
+   ```bash
+   systemctl status postfix
+   # oder
+   dpkg -l | grep ssmtp
+   ```
+
+3. Ist die E-Mail-Adresse korrekt in `config.conf`?
    ```bash
    cat config.conf | grep EMAIL
    ```
 
-3. Ist E-Mail aktiviert?
+4. Ist E-Mail aktiviert?
    ```bash
    cat config.conf | grep ENABLE_EMAIL
+   ```
+
+5. Test-E-Mail senden:
+   ```bash
+   echo "Test" | mail -s "Test" deine@email.de
+   # Prüfe /var/log/mail.log für Fehler
    ```
 
 ### Problem: Log-Verzeichnis kann nicht erstellt werden
@@ -316,13 +385,17 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.1.0 (2025-11-09)
+### Aktuelle Version: 1.2.0 (2025-11-09)
 
 **Highlights:**
-- ✅ Neues interaktives Log-Viewer-Script
-- ✅ Behobene Cron-Job-Einrichtung (Auswahl 1-4 funktioniert jetzt)
-- ✅ Verbesserte Input-Verarbeitung ohne unsichtbare ENTER-Schritte
-- ✅ Automatisches Anlegen des Log-Verzeichnisses mit sudo
-- ✅ Distributionsspezifische Installationsanweisungen für Mail-Programme
+- ✅ **NEU: Arch Linux Unterstützung** (Arch, Manjaro, EndeavourOS, Garuda, ArcoLinux)
+- ✅ Verbesserte E-Mail-Benachrichtigung mit Exit-Code-Prüfung
+- ✅ Erweiterte Fehlerbehandlung bei fehlender MTA-Konfiguration
+- ✅ Ausführliche E-Mail-Konfigurationsanleitung in der Dokumentation
+
+**Version 1.1.0:**
+- ✅ Interaktives Log-Viewer-Script
+- ✅ Behobene Cron-Job-Einrichtung
+- ✅ Verbesserte Input-Verarbeitung
 
 **Siehe [CHANGELOG.md](CHANGELOG.md) für alle Details**

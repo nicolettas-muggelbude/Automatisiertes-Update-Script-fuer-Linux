@@ -141,12 +141,18 @@ create_config() {
             echo
             print_warning "Kein Mail-Programm gefunden (mail/sendmail)"
             echo
-            echo "Für E-Mail-Benachrichtigungen wird ein Mail-Programm benötigt:"
-            echo "  - Debian/Ubuntu/Mint: sudo apt install mailutils"
-            echo "  - RHEL/Fedora: sudo dnf install mailx"
-            echo "  - openSUSE: sudo zypper install mailx"
+            echo "Für E-Mail-Benachrichtigungen benötigst du:"
+            echo "  1. Mail-Client (mail oder mailx)"
+            echo "  2. MTA (Mail Transfer Agent) wie postfix oder ssmtp"
             echo
-            echo "Du kannst das Programm jetzt installieren oder später nachrüsten."
+            echo "Installation:"
+            echo "  - Debian/Ubuntu/Mint: sudo apt install mailutils postfix"
+            echo "  - RHEL/Fedora: sudo dnf install mailx postfix"
+            echo "  - openSUSE: sudo zypper install mailx postfix"
+            echo "  - Arch/Manjaro: sudo pacman -S mailutils postfix"
+            echo
+            echo "Für einfache Konfiguration (z.B. Gmail) verwende ssmtp statt postfix."
+            echo "Du kannst dies jetzt installieren oder später nachrüsten."
             echo
             if ask_yes_no "Trotzdem mit E-Mail-Benachrichtigung fortfahren?" "y"; then
                 print_info "E-Mail-Benachrichtigung aktiviert (Mail-Programm muss noch installiert werden)"

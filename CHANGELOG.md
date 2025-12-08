@@ -5,6 +5,36 @@ Alle wichtigen Änderungen an diesem Projekt werden in dieser Datei dokumentiert
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/),
 und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.2.0] - 2025-11-09
+
+### Hinzugefügt
+- **Arch Linux Unterstützung**: Neue `update_arch()` Funktion
+  - Unterstützung für Arch Linux und Forks
+  - Manjaro, EndeavourOS, Garuda Linux, ArcoLinux
+  - Verwendet `pacman -Syu` für System-Updates
+  - Automatische Paket-Cache-Bereinigung mit `pacman -Sc`
+- Arch Linux zu allen Installationsanleitungen hinzugefügt
+- Mail-Konfiguration für Arch/Manjaro in README.md
+
+### Geändert
+- **E-Mail-Benachrichtigung**: Verbesserte Fehlerbehandlung
+  - Prüft Exit-Code von mail/sendmail Befehlen
+  - Meldet nur bei erfolgreicher Zustellung "E-Mail gesendet"
+  - Warnt explizit bei fehlender MTA-Konfiguration
+  - Gibt konkrete Hilfestellung zur MTA-Installation
+- **install.sh**: Erweiterte Mail-Programm-Hinweise
+  - Erklärt Unterschied zwischen Mail-Client und MTA
+  - Zeigt Installation für alle unterstützten Distributionen inkl. Arch
+- **README.md**: Ausführliche E-Mail-Konfigurationsanleitung
+  - Neue Sektion "E-Mail-Benachrichtigung" mit Voraussetzungen
+  - Fehlerbehebung für "Cannot start /usr/sbin/sendmail"
+  - Test-Anweisungen und Debugging-Tipps
+
+### Dokumentation
+- README.md: Arch Linux in unterstützte Distributionen aufgenommen
+- claude.md: Distributionsliste als Familien strukturiert
+- install.sh: Arch-spezifische Installationsbefehle hinzugefügt
+
 ## [1.1.0] - 2025-11-09
 
 ### Hinzugefügt
@@ -99,5 +129,6 @@ Das Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/):
 - **MINOR** (x.1.x): Neue Funktionen (abwärtskompatibel)
 - **PATCH** (x.x.1): Bugfixes (abwärtskompatibel)
 
+[1.2.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/releases/tag/v1.0.0

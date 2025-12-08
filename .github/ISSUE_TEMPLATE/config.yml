@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Fragen und Diskussionen
+    url: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/discussions
+    about: Für allgemeine Fragen bitte Discussions nutzen
+  - name: Dokumentation
+    url: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/blob/main/README.md
+    about: Vollständige Dokumentation und Anleitungen

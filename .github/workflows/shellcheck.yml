@@ -1,0 +1,42 @@
+name: ShellCheck
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  shellcheck:
+    name: Shell Script Analyse
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: ShellCheck ausführen
+      uses: ludeeus/action-shellcheck@master
+      with:
+        scandir: '.'
+        severity: warning
+        ignore_paths: '.git .github'
+
+    - name: Syntax-Check für alle Shell-Scripte
+      run: |
+        echo "Prüfe Syntax aller .sh Dateien..."
+        for script in *.sh; do
+          echo "Prüfe: $script"
+          bash -n "$script"
+        done
+
+    - name: Berechtigungen prüfen
+      run: |
+        echo "Prüfe ausführbare Berechtigungen..."
+        for script in update.sh install.sh log-viewer.sh; do
+          if [ ! -x "$script" ]; then
+            echo "FEHLER: $script ist nicht ausführbar!"
+            exit 1
+          fi
+        done
+        echo "Alle Scripte haben korrekte Berechtigungen."
