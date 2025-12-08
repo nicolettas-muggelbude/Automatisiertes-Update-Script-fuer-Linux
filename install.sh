@@ -54,7 +54,7 @@ ask_yes_no() {
         echo -ne "${YELLOW}$question [j/N]:${NC} "
     fi
 
-    read answer
+    read -r answer
 
     if [ -z "$answer" ]; then
         answer="$default"
@@ -78,7 +78,7 @@ ask_input() {
         echo -ne "${YELLOW}$question:${NC} " >&2
     fi
 
-    read answer
+    read -r answer
 
     if [ -z "$answer" ]; then
         echo "$default"
@@ -328,9 +328,7 @@ setup_cron() {
     fi
 
     # Neuen Cron-Job hinzufügen
-    (sudo crontab -l 2>/dev/null; echo "$cron_comment"; echo "$cron_command") | sudo crontab -
-
-    if [ $? -eq 0 ]; then
+    if (sudo crontab -l 2>/dev/null; echo "$cron_comment"; echo "$cron_command") | sudo crontab -; then
         print_info "Cron-Job erfolgreich eingerichtet"
         echo
         echo "Aktueller root-Cron-Job:"
@@ -433,14 +431,14 @@ fi
 # Installation durchführen
 create_config
 echo
-read -p "Drücke Enter zum Fortfahren..."
+read -r -p "Drücke Enter zum Fortfahren..."
 
 setup_cron
 echo
-read -p "Drücke Enter zum Fortfahren..."
+read -r -p "Drücke Enter zum Fortfahren..."
 
 test_script
 echo
-read -p "Drücke Enter zum Fortfahren..."
+read -r -p "Drücke Enter zum Fortfahren..."
 
 show_summary

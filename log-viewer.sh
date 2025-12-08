@@ -220,7 +220,7 @@ show_menu() {
 # Endlosschleife für Menü
 while true; do
     show_menu
-    read choice
+    read -r choice
 
     case "$choice" in
         1)
@@ -250,5 +250,5 @@ while true; do
 
     echo
     echo -e "${CYAN}---------------------------------------------------${NC}"
-    read -p "Drücke Enter um fortzufahren..."
+    read -r -p "Drücke Enter um fortzufahren..."
 done

@@ -119,13 +119,13 @@ update_debian() {
     log_info "Starte Update-Prozess für Debian-basierte Distribution..."
 
     apt-get update 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "apt-get update fehlgeschlagen"
         return 1
     fi
 
     apt-get upgrade -y 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "apt-get upgrade fehlgeschlagen"
         return 1
     fi
@@ -145,7 +145,7 @@ update_redhat() {
     if command -v dnf &> /dev/null; then
         dnf check-update 2>&1 | tee -a "$LOG_FILE"
         dnf upgrade -y 2>&1 | tee -a "$LOG_FILE"
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             log_error "dnf upgrade fehlgeschlagen"
             return 1
         fi
@@ -153,7 +153,7 @@ update_redhat() {
     elif command -v yum &> /dev/null; then
         yum check-update 2>&1 | tee -a "$LOG_FILE"
         yum update -y 2>&1 | tee -a "$LOG_FILE"
-        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             log_error "yum update fehlgeschlagen"
             return 1
         fi
@@ -172,13 +172,13 @@ update_suse() {
     log_info "Starte Update-Prozess für SUSE-basierte Distribution..."
 
     zypper refresh 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "zypper refresh fehlgeschlagen"
         return 1
     fi
 
     zypper update -y 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "zypper update fehlgeschlagen"
         return 1
     fi
@@ -192,13 +192,13 @@ update_solus() {
     log_info "Starte Update-Prozess für Solus-basierte Distribution..."
     
     eopkg update-repo 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "eopkg update-repo fehlgeschlagen"
         return 1
     fi
 
     eopkg upgrade -y 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "eopkg upgrade fehlgeschlagen"
         return 1
     fi
@@ -213,7 +213,7 @@ update_arch() {
 
     # Paketdatenbank synchronisieren und System aktualisieren
     pacman -Syu --noconfirm 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "pacman -Syu fehlgeschlagen"
         return 1
     fi
@@ -231,7 +231,7 @@ update_void() {
 
     # Paketdatenbank synchronisieren und System aktualisieren
     xbps-install -Su -y 2>&1 | tee -a "$LOG_FILE"
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "xbps-install -Su -y fehlgeschlagen"
         return 1
     fi
