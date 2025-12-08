@@ -203,6 +203,10 @@ update_solus() {
         return 1
     fi
 
+    log_info "Update erfolgreich abgeschlossen"
+    return 0
+}
+
 # Update für Arch Linux
 update_arch() {
     log_info "Starte Update-Prozess für Arch-basierte Distribution..."
@@ -232,7 +236,7 @@ update_void() {
         return 1
     fi
 
-        log_info "Update erfolgreich abgeschlossen"
+    log_info "Update erfolgreich abgeschlossen"
     return 0
 }
 
@@ -280,6 +284,7 @@ case "$DISTRO" in
         ;;
     solus)
         update_solus && UPDATE_SUCCESS=true
+        ;;
     arch|manjaro|endeavouros|garuda|arcolinux)
         update_arch && UPDATE_SUCCESS=true
         ;;
