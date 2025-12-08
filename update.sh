@@ -205,6 +205,21 @@ update_arch() {
     return 0
 }
 
+# Update für Void Linux
+update_void() {
+    log_info "Starte Update-Prozess für Void-basierte Distribution..."
+
+    # Paketdatenbank synchronisieren und System aktualisieren
+    xbps-install -Su -y 2>&1 | tee -a "$LOG_FILE"
+    if [ ${PIPESTATUS[0]} -ne 0 ]; then
+        log_error "xbps-install -Su -y fehlgeschlagen"
+        return 1
+    fi
+
+        log_info "Update erfolgreich abgeschlossen"
+    return 0
+}
+
 # Neustart prüfen
 check_reboot_required() {
     if [ "$AUTO_REBOOT" = true ]; then
@@ -249,6 +264,9 @@ case "$DISTRO" in
         ;;
     arch|manjaro|endeavouros|garuda|arcolinux)
         update_arch && UPDATE_SUCCESS=true
+        ;;
+    void)
+        update_void && UPDATE_SUCCESS=true
         ;;
     *)
         log_error "Nicht unterstützte Distribution: $DISTRO"
