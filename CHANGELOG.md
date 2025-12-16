@@ -7,6 +7,40 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.4.0] - TBD
+
+### Hinzugefügt
+- **Mehrsprachigkeit (i18n)**: Vollständige Unterstützung für mehrere Sprachen
+  - Deutsch (de) und Englisch (en) als Start-Sprachen
+  - Automatische Sprach-Erkennung aus System-Locale
+  - Manuelle Sprach-Konfiguration in config.conf
+  - Sprachdateien in `lang/` Verzeichnis
+  - `lang/README.md` mit Anleitung für Community-Übersetzungen
+- **install.sh**: Interaktive Sprachauswahl während Installation
+  - Bilingualer Start-Dialog (Deutsch/English)
+  - Gewählte Sprache wird in config.conf gespeichert
+  - Separate Sprachdateien für Installer (install-de.lang, install-en.lang)
+- **update.sh**: Vollständig mehrsprachig
+  - Alle 45+ Meldungen in Sprachdateien ausgelagert
+  - `load_language()` Funktion mit Auto-Detection
+  - Fallback-Mechanismus: Gewählte Sprache → Englisch → Fehler
+  - Unterstützt temporäre Sprachwahl via Umgebungsvariable
+- **config.conf**: Neuer Parameter `LANGUAGE` (auto|de|en|...)
+
+### Geändert
+- Alle Log-Ausgaben verwenden jetzt Variablen statt hart-codierte Strings
+- Log-Level Labels ([INFO], [ERROR], [WARNING]) sind jetzt mehrsprachig
+
+### Dokumentation
+- README.md: Neue Sektion "Mehrsprachigkeit" mit vollständiger Anleitung
+- lang/README.md: Anleitung für Community-Contributors
+- Alle Sprachdateien mit konsistenter Struktur und Kommentaren
+
+### Community
+- Einfacher Beitrag neuer Sprachen durch Community möglich
+- Klare Anleitung und Beispiele für Übersetzer
+- Standard ISO 639-1 Sprachcodes
+
 ## [1.3.0] - 2025-12-16
 
 ### Hinzugefügt
@@ -149,6 +183,7 @@ Das Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/):
 - **MINOR** (x.1.x): Neue Funktionen (abwärtskompatibel)
 - **PATCH** (x.x.1): Bugfixes (abwärtskompatibel)
 
+[1.4.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.0.0...v1.1.0

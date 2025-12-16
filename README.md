@@ -19,6 +19,7 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 
 ## Features
 
+- ✅ **Mehrsprachigkeit**: Deutsch und Englisch (weitere Sprachen via Community)
 - ✅ Automatische Distribution-Erkennung
 - ✅ Vollautomatische System-Updates
 - ✅ Detailliertes Logging mit Zeitstempel
@@ -119,11 +120,50 @@ sudo crontab -l
 sudo crontab -e
 ```
 
+## Mehrsprachigkeit
+
+Das Script unterstützt mehrere Sprachen. Die Sprache wird automatisch erkannt oder kann manuell konfiguriert werden.
+
+### Verfügbare Sprachen
+
+- **Deutsch** (de) - German
+- **English** (en) - English
+
+Weitere Sprachen können von der Community beigetragen werden! Siehe `lang/README.md` für Anleitung.
+
+### Sprache einstellen
+
+**Option 1: Automatische Erkennung (Standard)**
+
+Das Script erkennt automatisch die System-Sprache aus der `LANG` Umgebungsvariable.
+
+**Option 2: Manuelle Einstellung**
+
+In der `config.conf`:
+```bash
+# Sprache (auto|de|en)
+LANGUAGE=de     # Deutsch
+LANGUAGE=en     # English
+LANGUAGE=auto   # Automatisch
+```
+
+**Option 3: Temporär für einen Lauf**
+```bash
+LANGUAGE=en sudo ./update.sh
+```
+
+### Installation
+
+Während der Installation (`./install.sh`) wirst du nach deiner bevorzugten Sprache gefragt.
+
 ## Konfiguration
 
 Die Konfigurationsdatei `config.conf` enthält folgende Optionen:
 
 ```bash
+# Sprache (auto|de|en)
+LANGUAGE=auto
+
 # E-Mail-Benachrichtigung aktivieren (true/false)
 ENABLE_EMAIL=false
 

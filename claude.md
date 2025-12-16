@@ -169,6 +169,33 @@ Für die Verwendung:
 
 ## Version
 
+### 1.4.0 (in Entwicklung - Feature-Branch)
+**Neues Hauptfeature: Mehrsprachigkeit (i18n)**
+- Vollständige Internationalisierung des Scripts
+- Deutsch und Englisch als Start-Sprachen
+- Automatische Sprach-Erkennung oder manuelle Konfiguration
+- Sprachdateien-System mit einfacher Erweiterbarkeit
+
+**Technische Implementierung:**
+- `lang/` Verzeichnis mit Sprachdateien:
+  - `de.lang` / `en.lang` - für update.sh (45+ Strings)
+  - `install-de.lang` / `install-en.lang` - für install.sh (60+ Strings)
+  - `README.md` - Contributor-Guide
+- `load_language()` Funktion in update.sh:
+  - Auto-Detection via `$LANG` Umgebungsvariable
+  - Fallback-Kette: Gewünscht → EN → Fehler
+  - Unterstützt temporäre Sprachwahl
+- `select_and_load_language()` in install.sh:
+  - Bilinguale Sprachauswahl am Start
+  - Gewählte Sprache wird in config.conf persistiert
+- Alle Log-Level Labels mehrsprachig
+- ISO 639-1 Standard für Sprachcodes
+
+**Community-Aspekt:**
+- Einfacher Beitrag neuer Sprachen
+- Klare Struktur und Dokumentation
+- Keine externen Abhängigkeiten (Pure Bash)
+
 ### 1.3.0 (2025-12-16)
 **Neue Features:**
 - Solus Unterstützung hinzugefügt (PR #3 von @mrtoadie)
