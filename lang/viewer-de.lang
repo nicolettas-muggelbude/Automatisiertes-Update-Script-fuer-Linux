@@ -1,0 +1,66 @@
+#!/bin/bash
+#############################################################
+# Deutsche Sprachdatei für log-viewer.sh
+# Language: Deutsch (de)
+#############################################################
+
+# Header
+VIEWER_HEADER="Update-Script Log Viewer"
+
+# Labels
+VIEWER_LABEL_INFO="INFO"
+VIEWER_LABEL_ERROR="FEHLER"
+VIEWER_LABEL_WARNING="WARNUNG"
+
+# Menü
+VIEWER_MENU_PROMPT="Wähle eine Option:"
+VIEWER_MENU_1="Neueste Logdatei komplett anzeigen"
+VIEWER_MENU_2="Letzte 50 Zeilen des neuesten Logs"
+VIEWER_MENU_3="Alle Logdateien auflisten"
+VIEWER_MENU_4="Nach Fehlern in Logs suchen"
+VIEWER_MENU_5="Beenden"
+VIEWER_MENU_CHOICE="Auswahl"
+
+# Fehler
+VIEWER_NO_LOGS="Keine Logdateien gefunden in"
+VIEWER_NO_DIR="Log-Verzeichnis nicht gefunden"
+VIEWER_NO_PERMISSION="Keine Leseberechtigung für"
+VIEWER_INVALID_CHOICE="Ungültige Auswahl"
+
+# Mögliche Ursachen
+VIEWER_CAUSES="Mögliche Ursachen:"
+VIEWER_CAUSE_NO_UPDATES="Noch keine Updates durchgeführt"
+VIEWER_CAUSE_WRONG_DIR="Falsches Log-Verzeichnis konfiguriert"
+VIEWER_CAUSE_NO_ACCESS="Keine Leseberechtigung"
+VIEWER_TRY_SUDO="Versuche: sudo"
+
+# Anzeige
+VIEWER_NEWEST_LOG="Neueste Logdatei"
+VIEWER_LAST_50="Letzte 50 Zeilen des neuesten Logs"
+VIEWER_ALL_LOGS="Alle verfügbaren Logdateien"
+VIEWER_SEARCH_ERRORS="Fehler in Logdateien suchen"
+
+# Datei-Info
+VIEWER_LOGFILE="Logdatei"
+VIEWER_SIZE="Größe"
+VIEWER_CREATED="Erstellt"
+VIEWER_LOG_DIR="Log-Verzeichnis"
+VIEWER_TOTAL="Gesamt"
+VIEWER_LOGFILES="Logdatei(en)"
+
+# Content
+VIEWER_LOG_CONTENT="--- Loginhalt ---"
+VIEWER_LAST_LINES="--- Letzte 50 Zeilen ---"
+
+# Tabellen-Header
+VIEWER_TABLE_DATETIME="Datum/Zeit"
+VIEWER_TABLE_SIZE="Größe"
+VIEWER_TABLE_FILENAME="Dateiname"
+
+# Fehlersuche
+VIEWER_SEARCHING="Durchsuche alle Logs nach Fehlern..."
+VIEWER_NO_ERRORS="Keine Fehler in den Logdateien gefunden"
+
+# Navigation
+VIEWER_CONTINUE="Drücke Enter um fortzufahren..."
+VIEWER_GOODBYE="Tschüß!"

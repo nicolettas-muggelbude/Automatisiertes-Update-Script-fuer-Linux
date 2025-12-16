@@ -20,12 +20,43 @@ CONFIG_FILE="${SCRIPT_DIR}/config.conf"
 
 # Standard-Log-Verzeichnis
 LOG_DIR="/var/log/system-updates"
+LANGUAGE=auto
 
 # Konfiguration laden, falls vorhanden
 if [ -f "$CONFIG_FILE" ]; then
     source "$CONFIG_FILE"
     LOG_DIR="${LOG_DIR:-/var/log/system-updates}"
+    LANGUAGE="${LANGUAGE:-auto}"
 fi
+
+# Sprache laden
+load_language() {
+    local lang="${LANGUAGE:-auto}"
+
+    # Automatische Sprach-Erkennung
+    if [ "$lang" = "auto" ]; then
+        lang="${LANG%%.*}"
+        lang="${lang%%_*}"
+        lang="${lang:-en}"
+    fi
+
+    # Sprachdatei für Log-Viewer laden
+    local viewer_lang_file="${SCRIPT_DIR}/lang/viewer-${lang}.lang"
+    if [ -f "$viewer_lang_file" ]; then
+        source "$viewer_lang_file"
+    else
+        # Fallback zu Englisch
+        if [ -f "${SCRIPT_DIR}/lang/viewer-en.lang" ]; then
+            source "${SCRIPT_DIR}/lang/viewer-en.lang"
+        else
+            echo "ERROR: No language files found!"
+            exit 1
+        fi
+    fi
+}
+
+# Sprache initialisieren
+load_language
 
 #############################################################
 # Funktionen
@@ -34,21 +65,21 @@ fi
 print_header() {
     clear
     echo -e "${BLUE}=================================================${NC}"
-    echo -e "${BLUE}        Update-Script Log Viewer${NC}"
+    echo -e "${BLUE}        ${VIEWER_HEADER}${NC}"
     echo -e "${BLUE}=================================================${NC}"
     echo
 }
 
 print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[${VIEWER_LABEL_INFO}]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}[FEHLER]${NC} $1"
+    echo -e "${RED}[${VIEWER_LABEL_ERROR}]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNUNG]${NC} $1"
+    echo -e "${YELLOW}[${VIEWER_LABEL_WARNING}]${NC} $1"
 }
 
 # Neueste Logdatei finden
@@ -69,32 +100,32 @@ get_latest_log() {
 # Neueste Logdatei komplett anzeigen
 show_full_log() {
     print_header
-    echo -e "${GREEN}Neueste Logdatei${NC}\n"
+    echo -e "${GREEN}${VIEWER_NEWEST_LOG}${NC}\n"
 
     local logfile=$(get_latest_log)
 
     if [ $? -ne 0 ] || [ -z "$logfile" ]; then
-        print_error "Keine Logdateien gefunden in: $LOG_DIR"
+        print_error "$VIEWER_NO_LOGS: $LOG_DIR"
         echo
-        echo "Mögliche Ursachen:"
-        echo "  - Noch keine Updates durchgeführt"
-        echo "  - Falsches Log-Verzeichnis konfiguriert"
-        echo "  - Keine Leseberechtigung"
+        echo "$VIEWER_CAUSES"
+        echo "  - $VIEWER_CAUSE_NO_UPDATES"
+        echo "  - $VIEWER_CAUSE_WRONG_DIR"
+        echo "  - $VIEWER_CAUSE_NO_ACCESS"
         return 1
     fi
 
-    print_info "Logdatei: $logfile"
-    print_info "Größe: $(du -h "$logfile" | cut -f1)"
-    print_info "Erstellt: $(stat -c %y "$logfile" | cut -d'.' -f1)"
+    print_info "$VIEWER_LOGFILE: $logfile"
+    print_info "$VIEWER_SIZE: $(du -h "$logfile" | cut -f1)"
+    print_info "$VIEWER_CREATED: $(stat -c %y "$logfile" | cut -d'.' -f1)"
     echo
-    echo -e "${CYAN}--- Loginhalt ---${NC}"
+    echo -e "${CYAN}${VIEWER_LOG_CONTENT}${NC}"
     echo
 
     if [ -r "$logfile" ]; then
         cat "$logfile"
     else
-        print_error "Keine Leseberechtigung für: $logfile"
-        echo "Versuche: sudo $0"
+        print_error "$VIEWER_NO_PERMISSION: $logfile"
+        echo "$VIEWER_TRY_SUDO $0"
         return 1
     fi
 }
@@ -102,32 +133,32 @@ show_full_log() {
 # Letzte 50 Zeilen anzeigen
 show_tail_log() {
     print_header
-    echo -e "${GREEN}Letzte 50 Zeilen des neuesten Logs${NC}\n"
+    echo -e "${GREEN}${VIEWER_LAST_50}${NC}\n"
 
     local logfile=$(get_latest_log)
 
     if [ $? -ne 0 ] || [ -z "$logfile" ]; then
-        print_error "Keine Logdateien gefunden in: $LOG_DIR"
+        print_error "$VIEWER_NO_LOGS: $LOG_DIR"
         echo
-        echo "Mögliche Ursachen:"
-        echo "  - Noch keine Updates durchgeführt"
-        echo "  - Falsches Log-Verzeichnis konfiguriert"
-        echo "  - Keine Leseberechtigung"
+        echo "$VIEWER_CAUSES"
+        echo "  - $VIEWER_CAUSE_NO_UPDATES"
+        echo "  - $VIEWER_CAUSE_WRONG_DIR"
+        echo "  - $VIEWER_CAUSE_NO_ACCESS"
         return 1
     fi
 
-    print_info "Logdatei: $logfile"
-    print_info "Größe: $(du -h "$logfile" | cut -f1)"
-    print_info "Erstellt: $(stat -c %y "$logfile" | cut -d'.' -f1)"
+    print_info "$VIEWER_LOGFILE: $logfile"
+    print_info "$VIEWER_SIZE: $(du -h "$logfile" | cut -f1)"
+    print_info "$VIEWER_CREATED: $(stat -c %y "$logfile" | cut -d'.' -f1)"
     echo
-    echo -e "${CYAN}--- Letzte 50 Zeilen ---${NC}"
+    echo -e "${CYAN}${VIEWER_LAST_LINES}${NC}"
     echo
 
     if [ -r "$logfile" ]; then
         tail -n 50 "$logfile"
     else
-        print_error "Keine Leseberechtigung für: $logfile"
-        echo "Versuche: sudo $0"
+        print_error "$VIEWER_NO_PERMISSION: $logfile"
+        echo "$VIEWER_TRY_SUDO $0"
         return 1
     fi
 }
@@ -135,23 +166,23 @@ show_tail_log() {
 # Alle Logdateien auflisten
 list_all_logs() {
     print_header
-    echo -e "${GREEN}Alle verfügbaren Logdateien${NC}\n"
+    echo -e "${GREEN}${VIEWER_ALL_LOGS}${NC}\n"
 
     if [ ! -d "$LOG_DIR" ]; then
-        print_error "Log-Verzeichnis nicht gefunden: $LOG_DIR"
+        print_error "$VIEWER_NO_DIR: $LOG_DIR"
         return 1
     fi
 
     local logs=$(ls -t "$LOG_DIR"/update_*.log 2>/dev/null)
 
     if [ -z "$logs" ]; then
-        print_warning "Keine Logdateien gefunden in: $LOG_DIR"
+        print_warning "$VIEWER_NO_LOGS: $LOG_DIR"
         return 1
     fi
 
-    print_info "Log-Verzeichnis: $LOG_DIR"
+    print_info "$VIEWER_LOG_DIR: $LOG_DIR"
     echo
-    echo -e "${CYAN}Datum/Zeit${NC}           ${CYAN}Größe${NC}    ${CYAN}Dateiname${NC}"
+    echo -e "${CYAN}${VIEWER_TABLE_DATETIME}${NC}           ${CYAN}${VIEWER_TABLE_SIZE}${NC}    ${CYAN}${VIEWER_TABLE_FILENAME}${NC}"
     echo "-----------------------------------------------------------"
 
     ls -lth "$LOG_DIR"/update_*.log 2>/dev/null | awk '{
@@ -168,20 +199,20 @@ list_all_logs() {
 
     echo
     local count=$(ls "$LOG_DIR"/update_*.log 2>/dev/null | wc -l)
-    print_info "Gesamt: $count Logdatei(en)"
+    print_info "$VIEWER_TOTAL: $count $VIEWER_LOGFILES"
 }
 
 # Logs nach Fehler durchsuchen
 search_errors() {
     print_header
-    echo -e "${GREEN}Fehler in Logdateien suchen${NC}\n"
+    echo -e "${GREEN}${VIEWER_SEARCH_ERRORS}${NC}\n"
 
     if [ ! -d "$LOG_DIR" ]; then
-        print_error "Log-Verzeichnis nicht gefunden: $LOG_DIR"
+        print_error "$VIEWER_NO_DIR: $LOG_DIR"
         return 1
     fi
 
-    print_info "Durchsuche alle Logs nach Fehlern..."
+    print_info "$VIEWER_SEARCHING"
     echo
 
     local found=0
@@ -195,7 +226,7 @@ search_errors() {
     done
 
     if [ $found -eq 0 ]; then
-        print_info "Keine Fehler in den Logdateien gefunden"
+        print_info "$VIEWER_NO_ERRORS"
     fi
 }
 
@@ -203,14 +234,14 @@ search_errors() {
 show_menu() {
     print_header
 
-    echo -e "${CYAN}Wähle eine Option:${NC}\n"
-    echo "  1) Neueste Logdatei komplett anzeigen"
-    echo "  2) Letzte 50 Zeilen des neuesten Logs"
-    echo "  3) Alle Logdateien auflisten"
-    echo "  4) Nach Fehlern in Logs suchen"
-    echo "  5) Beenden"
+    echo -e "${CYAN}${VIEWER_MENU_PROMPT}${NC}\n"
+    echo "  1) $VIEWER_MENU_1"
+    echo "  2) $VIEWER_MENU_2"
+    echo "  3) $VIEWER_MENU_3"
+    echo "  4) $VIEWER_MENU_4"
+    echo "  5) $VIEWER_MENU_5"
     echo
-    echo -ne "${YELLOW}Auswahl [1-5]:${NC} "
+    echo -ne "${YELLOW}${VIEWER_MENU_CHOICE} [1-5]:${NC} "
 }
 
 #############################################################
@@ -237,18 +268,18 @@ while true; do
             ;;
         5|q|Q)
             print_header
-            print_info "Tschüß!"
+            print_info "$VIEWER_GOODBYE"
             echo
             exit 0
             ;;
         *)
             print_header
-            print_error "Ungültige Auswahl: $choice"
+            print_error "$VIEWER_INVALID_CHOICE: $choice"
             echo
             ;;
     esac
 
     echo
     echo -e "${CYAN}---------------------------------------------------${NC}"
-    read -r -p "Drücke Enter um fortzufahren..."
+    read -r -p "$VIEWER_CONTINUE"
 done

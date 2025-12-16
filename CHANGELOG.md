@@ -25,6 +25,10 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - `load_language()` Funktion mit Auto-Detection
   - Fallback-Mechanismus: Gewählte Sprache → Englisch → Fehler
   - Unterstützt temporäre Sprachwahl via Umgebungsvariable
+- **log-viewer.sh**: Vollständig mehrsprachig
+  - Separate Sprachdateien (viewer-de.lang, viewer-en.lang)
+  - Alle Menüs, Meldungen und Fehler mehrsprachig
+  - Gleicher Sprach-Mechanismus wie update.sh
 - **config.conf**: Neuer Parameter `LANGUAGE` (auto|de|en|...)
 
 ### Geändert

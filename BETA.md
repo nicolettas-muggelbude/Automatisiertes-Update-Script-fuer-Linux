@@ -108,9 +108,8 @@ Bitte teste folgende Szenarien:
 
 ## Bekannte Einschränkungen
 
-- ⚠️ `log-viewer.sh` ist noch nicht mehrsprachig
-- ⚠️ Nur 2 Sprachen verfügbar (weitere folgen)
-- ⚠️ Teilweise noch deutsche Strings in install.sh (nicht-kritische Bereiche)
+- ⚠️ Nur 2 Sprachen verfügbar (weitere folgen durch Community)
+- ⚠️ Teilweise noch deutsche Strings in install.sh (nicht-kritische Bereiche wie Cron-Setup)
 
 ## Feedback geben
 

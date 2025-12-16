@@ -1,0 +1,66 @@
+#!/bin/bash
+#############################################################
+# English Language File for log-viewer.sh
+# Language: English (en)
+#############################################################
+
+# Header
+VIEWER_HEADER="Update Script Log Viewer"
+
+# Labels
+VIEWER_LABEL_INFO="INFO"
+VIEWER_LABEL_ERROR="ERROR"
+VIEWER_LABEL_WARNING="WARNING"
+
+# Menu
+VIEWER_MENU_PROMPT="Choose an option:"
+VIEWER_MENU_1="Show complete newest log file"
+VIEWER_MENU_2="Show last 50 lines of newest log"
+VIEWER_MENU_3="List all log files"
+VIEWER_MENU_4="Search for errors in logs"
+VIEWER_MENU_5="Exit"
+VIEWER_MENU_CHOICE="Selection"
+
+# Errors
+VIEWER_NO_LOGS="No log files found in"
+VIEWER_NO_DIR="Log directory not found"
+VIEWER_NO_PERMISSION="No read permission for"
+VIEWER_INVALID_CHOICE="Invalid selection"
+
+# Possible Causes
+VIEWER_CAUSES="Possible causes:"
+VIEWER_CAUSE_NO_UPDATES="No updates performed yet"
+VIEWER_CAUSE_WRONG_DIR="Wrong log directory configured"
+VIEWER_CAUSE_NO_ACCESS="No read permission"
+VIEWER_TRY_SUDO="Try: sudo"
+
+# Display
+VIEWER_NEWEST_LOG="Newest log file"
+VIEWER_LAST_50="Last 50 lines of newest log"
+VIEWER_ALL_LOGS="All available log files"
+VIEWER_SEARCH_ERRORS="Search for errors in log files"
+
+# File Info
+VIEWER_LOGFILE="Log file"
+VIEWER_SIZE="Size"
+VIEWER_CREATED="Created"
+VIEWER_LOG_DIR="Log directory"
+VIEWER_TOTAL="Total"
+VIEWER_LOGFILES="log file(s)"
+
+# Content
+VIEWER_LOG_CONTENT="--- Log Content ---"
+VIEWER_LAST_LINES="--- Last 50 Lines ---"
+
+# Table Headers
+VIEWER_TABLE_DATETIME="Date/Time"
+VIEWER_TABLE_SIZE="Size"
+VIEWER_TABLE_FILENAME="Filename"
+
+# Error Search
+VIEWER_SEARCHING="Searching all logs for errors..."
+VIEWER_NO_ERRORS="No errors found in log files"
+
+# Navigation
+VIEWER_CONTINUE="Press Enter to continue..."
+VIEWER_GOODBYE="Goodbye!"
