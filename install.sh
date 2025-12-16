@@ -45,9 +45,11 @@ select_and_load_language() {
     # Sprachdatei für Installer laden
     local install_lang_file="${SCRIPT_DIR}/lang/install-${INSTALLER_LANGUAGE}.lang"
     if [ -f "$install_lang_file" ]; then
+        # shellcheck source=/dev/null
         source "$install_lang_file"
     else
         # Fallback zu Englisch
+        # shellcheck source=/dev/null
         source "${SCRIPT_DIR}/lang/install-en.lang" 2>/dev/null || {
             echo "ERROR: No language files found!"
             exit 1
@@ -134,6 +136,7 @@ ask_input() {
 load_existing_config() {
     if [ -f "$CONFIG_FILE" ]; then
         print_info "$INSTALL_CONFIG_EXISTS"
+        # shellcheck source=/dev/null
         source "$CONFIG_FILE"
         return 0
     fi

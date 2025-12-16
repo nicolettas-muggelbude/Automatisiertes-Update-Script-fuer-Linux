@@ -26,6 +26,7 @@ LANGUAGE=auto
 
 # Konfiguration laden, falls vorhanden
 if [ -f "$CONFIG_FILE" ]; then
+    # shellcheck source=/dev/null
     source "$CONFIG_FILE"
 fi
 
@@ -44,10 +45,12 @@ load_language() {
     # Sprachdatei laden
     local lang_file="${SCRIPT_DIR}/lang/${lang}.lang"
     if [ -f "$lang_file" ]; then
+        # shellcheck source=/dev/null
         source "$lang_file"
     else
         # Fallback zu Englisch
         if [ -f "${SCRIPT_DIR}/lang/en.lang" ]; then
+            # shellcheck source=/dev/null
             source "${SCRIPT_DIR}/lang/en.lang"
         else
             # Notfall: Keine Sprachdatei gefunden
