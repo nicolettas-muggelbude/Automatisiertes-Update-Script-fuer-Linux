@@ -205,7 +205,8 @@ list_all_logs() {
     }'
 
     echo
-    local count=$(ls "$LOG_DIR"/update_*.log 2>/dev/null | wc -l)
+    local count
+    count=$(find "$LOG_DIR" -name "update_*.log" -type f 2>/dev/null | wc -l)
     print_info "$VIEWER_TOTAL: $count $VIEWER_LOGFILES"
 }
 
