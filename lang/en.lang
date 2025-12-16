@@ -1,0 +1,81 @@
+#!/bin/bash
+#############################################################
+# English Language File for Linux Update Script
+# Language: English (en)
+#############################################################
+
+# Log-Level Labels
+LABEL_INFO="INFO"
+LABEL_ERROR="ERROR"
+LABEL_WARNING="WARNING"
+
+# General Messages
+MSG_LOG_DIR_ERROR="Error: Cannot create log directory. Root privileges required!"
+MSG_ROOT_REQUIRED="This script must be run as root!"
+MSG_ROOT_TRY="Try: sudo"
+
+# Distribution
+MSG_DISTRO_DETECTED="Distribution detected"
+MSG_DISTRO_NOT_FOUND="Cannot detect distribution (/etc/os-release not found)"
+MSG_DISTRO_NOT_SUPPORTED="Unsupported distribution"
+
+# Email
+MSG_EMAIL_SENT="Email successfully sent to"
+MSG_EMAIL_FAILED="Email could not be sent (MTA not configured?)"
+MSG_EMAIL_INSTALL_MTA="Install and configure an MTA like postfix or ssmtp"
+MSG_EMAIL_NO_PROGRAM="No mail program found (mail/sendmail)"
+MSG_EMAIL_INSTALL_CLIENT="Install 'mailutils' or 'mailx' for email notifications"
+
+# Update Process
+MSG_UPDATE_START_DEBIAN="Starting update process for Debian-based distribution..."
+MSG_UPDATE_START_REDHAT="Starting update process for RedHat-based distribution..."
+MSG_UPDATE_START_SUSE="Starting update process for SUSE-based distribution..."
+MSG_UPDATE_START_SOLUS="Starting update process for Solus-based distribution..."
+MSG_UPDATE_START_ARCH="Starting update process for Arch-based distribution..."
+MSG_UPDATE_START_VOID="Starting update process for Void-based distribution..."
+
+MSG_UPDATE_SUCCESS="Update completed successfully"
+
+# Package Manager Errors
+MSG_APT_UPDATE_FAILED="apt-get update failed"
+MSG_APT_UPGRADE_FAILED="apt-get upgrade failed"
+MSG_DNF_FAILED="dnf upgrade failed"
+MSG_YUM_FAILED="yum update failed"
+MSG_NO_PKG_MANAGER="No package manager found (dnf/yum)"
+MSG_ZYPPER_REFRESH_FAILED="zypper refresh failed"
+MSG_ZYPPER_UPDATE_FAILED="zypper update failed"
+MSG_EOPKG_REPO_FAILED="eopkg update-repo failed"
+MSG_EOPKG_UPGRADE_FAILED="eopkg upgrade failed"
+MSG_PACMAN_FAILED="pacman -Syu failed"
+MSG_XBPS_FAILED="xbps-install -Su -y failed"
+
+# Reboot
+MSG_REBOOT_AUTO="Reboot required - will be performed automatically..."
+MSG_REBOOT_MANUAL="Reboot required! Please restart the system."
+MSG_REBOOT_NOTIFICATION="The system will be restarted after the update."
+
+# Main Status
+MSG_HEADER_START="=== System Update Started ==="
+MSG_HEADER_SUCCESS="=== System Update Completed Successfully ==="
+MSG_HEADER_FAILED="=== System Update FAILED ==="
+
+# System Info
+MSG_HOSTNAME="Hostname"
+MSG_KERNEL="Kernel"
+MSG_DISTRIBUTION="Distribution"
+MSG_TIMESTAMP="Timestamp"
+MSG_LOGFILE="Logfile"
+
+# Email Subjects
+EMAIL_SUBJECT_SUCCESS="System Update Successful"
+EMAIL_SUBJECT_FAILED="System Update FAILED"
+EMAIL_SUBJECT_REBOOT="System Update: Reboot Required"
+
+# Email Body
+EMAIL_BODY_SUCCESS="System update completed successfully"
+EMAIL_BODY_FAILED="System update failed!"
+EMAIL_BODY_CHECK_LOG="Please check the log file!"
+
+# Language Info
+LANGUAGE_NAME="English"
+LANGUAGE_CODE="en"

@@ -1,0 +1,81 @@
+#!/bin/bash
+#############################################################
+# Deutsche Sprachdatei für Linux Update-Script
+# Language: Deutsch (de)
+#############################################################
+
+# Log-Level Labels
+LABEL_INFO="INFO"
+LABEL_ERROR="FEHLER"
+LABEL_WARNING="WARNUNG"
+
+# Allgemeine Meldungen
+MSG_LOG_DIR_ERROR="Fehler: Kann Log-Verzeichnis nicht erstellen. Benötigt root-Rechte!"
+MSG_ROOT_REQUIRED="Dieses Script muss als root ausgeführt werden!"
+MSG_ROOT_TRY="Versuche: sudo"
+
+# Distribution
+MSG_DISTRO_DETECTED="Distribution erkannt"
+MSG_DISTRO_NOT_FOUND="Kann Distribution nicht erkennen (/etc/os-release fehlt)"
+MSG_DISTRO_NOT_SUPPORTED="Nicht unterstützte Distribution"
+
+# E-Mail
+MSG_EMAIL_SENT="E-Mail erfolgreich gesendet an"
+MSG_EMAIL_FAILED="E-Mail konnte nicht gesendet werden (MTA nicht konfiguriert?)"
+MSG_EMAIL_INSTALL_MTA="Installiere und konfiguriere einen MTA wie postfix oder ssmtp"
+MSG_EMAIL_NO_PROGRAM="Kein Mail-Programm gefunden (mail/sendmail)"
+MSG_EMAIL_INSTALL_CLIENT="Installiere 'mailutils' oder 'mailx' für E-Mail-Benachrichtigungen"
+
+# Update-Prozess
+MSG_UPDATE_START_DEBIAN="Starte Update-Prozess für Debian-basierte Distribution..."
+MSG_UPDATE_START_REDHAT="Starte Update-Prozess für RedHat-basierte Distribution..."
+MSG_UPDATE_START_SUSE="Starte Update-Prozess für SUSE-basierte Distribution..."
+MSG_UPDATE_START_SOLUS="Starte Update-Prozess für Solus-basierte Distribution..."
+MSG_UPDATE_START_ARCH="Starte Update-Prozess für Arch-basierte Distribution..."
+MSG_UPDATE_START_VOID="Starte Update-Prozess für Void-basierte Distribution..."
+
+MSG_UPDATE_SUCCESS="Update erfolgreich abgeschlossen"
+
+# Paketmanager Fehler
+MSG_APT_UPDATE_FAILED="apt-get update fehlgeschlagen"
+MSG_APT_UPGRADE_FAILED="apt-get upgrade fehlgeschlagen"
+MSG_DNF_FAILED="dnf upgrade fehlgeschlagen"
+MSG_YUM_FAILED="yum update fehlgeschlagen"
+MSG_NO_PKG_MANAGER="Kein Paketmanager gefunden (dnf/yum)"
+MSG_ZYPPER_REFRESH_FAILED="zypper refresh fehlgeschlagen"
+MSG_ZYPPER_UPDATE_FAILED="zypper update fehlgeschlagen"
+MSG_EOPKG_REPO_FAILED="eopkg update-repo fehlgeschlagen"
+MSG_EOPKG_UPGRADE_FAILED="eopkg upgrade fehlgeschlagen"
+MSG_PACMAN_FAILED="pacman -Syu fehlgeschlagen"
+MSG_XBPS_FAILED="xbps-install -Su -y fehlgeschlagen"
+
+# Neustart
+MSG_REBOOT_AUTO="Neustart erforderlich - wird automatisch durchgeführt..."
+MSG_REBOOT_MANUAL="Neustart erforderlich! Bitte System neu starten."
+MSG_REBOOT_NOTIFICATION="Das System wird nach dem Update neu gestartet."
+
+# Haupt-Status
+MSG_HEADER_START="=== System-Update gestartet ==="
+MSG_HEADER_SUCCESS="=== System-Update erfolgreich abgeschlossen ==="
+MSG_HEADER_FAILED="=== System-Update FEHLGESCHLAGEN ==="
+
+# System-Info
+MSG_HOSTNAME="Hostname"
+MSG_KERNEL="Kernel"
+MSG_DISTRIBUTION="Distribution"
+MSG_TIMESTAMP="Zeitpunkt"
+MSG_LOGFILE="Logdatei"
+
+# E-Mail Betreffzeilen
+EMAIL_SUBJECT_SUCCESS="System-Update erfolgreich"
+EMAIL_SUBJECT_FAILED="System-Update FEHLGESCHLAGEN"
+EMAIL_SUBJECT_REBOOT="System-Update: Neustart erforderlich"
+
+# E-Mail Texte
+EMAIL_BODY_SUCCESS="System-Update erfolgreich abgeschlossen"
+EMAIL_BODY_FAILED="System-Update fehlgeschlagen!"
+EMAIL_BODY_CHECK_LOG="Bitte Logdatei prüfen!"
+
+# Sprachinfo
+LANGUAGE_NAME="Deutsch"
+LANGUAGE_CODE="de"

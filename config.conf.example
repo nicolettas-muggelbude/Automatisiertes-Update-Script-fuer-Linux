@@ -2,6 +2,10 @@
 # Kopiere diese Datei nach config.conf und passe die Werte an
 # cp config.conf.example config.conf
 
+# Sprache / Language (auto|de|en|fr|es)
+# 'auto' = Automatische Erkennung aus System-Locale / Automatic detection from system locale
+LANGUAGE=auto
+
 # E-Mail-Benachrichtigung aktivieren (true/false)
 ENABLE_EMAIL=false
 
