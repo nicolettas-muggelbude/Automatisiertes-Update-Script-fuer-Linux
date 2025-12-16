@@ -1,0 +1,78 @@
+#!/bin/bash
+#############################################################
+# Deutsche Sprachdatei für install.sh
+# Language: Deutsch (de)
+#############################################################
+
+# Header
+INSTALL_HEADER="Linux System Update Script - Installation"
+
+# Labels
+INSTALL_LABEL_INFO="INFO"
+INSTALL_LABEL_ERROR="FEHLER"
+INSTALL_LABEL_WARNING="WARNUNG"
+
+# Sprach-Auswahl
+INSTALL_LANGUAGE_PROMPT="Wähle deine Sprache / Choose your language"
+INSTALL_LANGUAGE_GERMAN="Deutsch"
+INSTALL_LANGUAGE_ENGLISH="English"
+INSTALL_LANGUAGE_AUTO="Automatisch / Automatic"
+INSTALL_LANGUAGE_SELECTED="Sprache ausgewählt"
+
+# Allgemein
+INSTALL_CONFIG_CREATING="Konfiguration wird erstellt..."
+INSTALL_CONFIG_EXISTS="Bestehende Konfiguration gefunden"
+INSTALL_CONFIG_SAVED="Konfiguration erfolgreich gespeichert"
+INSTALL_GENERATED_AT="Generiert am"
+
+# E-Mail
+INSTALL_EMAIL_ENABLE="E-Mail-Benachrichtigung aktivieren?"
+INSTALL_EMAIL_ADDRESS="E-Mail-Adresse für Benachrichtigungen"
+INSTALL_EMAIL_SAVED="E-Mail-Adresse gespeichert"
+INSTALL_EMAIL_EMPTY="E-Mail-Adresse darf nicht leer sein"
+INSTALL_EMAIL_NO_PROGRAM="Kein Mail-Programm gefunden (mail/sendmail)"
+INSTALL_EMAIL_REQUIREMENTS="Für E-Mail-Benachrichtigungen benötigst du:"
+INSTALL_EMAIL_REQ_CLIENT="Mail-Client (mail oder mailx)"
+INSTALL_EMAIL_REQ_MTA="MTA (Mail Transfer Agent) wie postfix oder ssmtp"
+INSTALL_EMAIL_INSTALLATION="Installation:"
+INSTALL_EMAIL_SIMPLE="Für einfache Konfiguration (z.B. Gmail) verwende ssmtp statt postfix."
+INSTALL_EMAIL_LATER="Du kannst dies jetzt installieren oder später nachrüsten."
+INSTALL_EMAIL_CONTINUE="Trotzdem mit E-Mail-Benachrichtigung fortfahren?"
+INSTALL_EMAIL_ENABLED="E-Mail-Benachrichtigung aktiviert (Mail-Programm muss noch installiert werden)"
+INSTALL_EMAIL_DISABLED="E-Mail-Benachrichtigung deaktiviert"
+
+# Neustart
+INSTALL_REBOOT_ENABLE="Automatischen Neustart aktivieren (falls erforderlich)?"
+INSTALL_REBOOT_WARNING="System wird automatisch neu gestartet, wenn Updates dies erfordern!"
+
+# Log-Verzeichnis
+INSTALL_LOG_DEFAULT="Standard Log-Verzeichnis"
+INSTALL_LOG_CHANGE="Möchtest du das Log-Verzeichnis ändern?"
+INSTALL_LOG_NEW="Neues Log-Verzeichnis"
+INSTALL_LOG_CHANGED="Log-Verzeichnis geändert auf"
+INSTALL_LOG_CREATE_FAILED="Log-Verzeichnis konnte nicht erstellt werden"
+INSTALL_LOG_CREATE_TRY="Versuche mit sudo"
+
+# Cron-Job
+INSTALL_CRON_SETUP="Möchtest du einen automatischen Cron-Job einrichten?"
+INSTALL_CRON_FREQUENCY="Wie oft sollen Updates durchgeführt werden?"
+INSTALL_CRON_DAILY="Täglich (3:00 Uhr)"
+INSTALL_CRON_WEEKLY="Wöchentlich (Sonntag, 3:00 Uhr)"
+INSTALL_CRON_MONTHLY="Monatlich (1. des Monats, 3:00 Uhr)"
+INSTALL_CRON_CUSTOM="Benutzerdefiniert"
+INSTALL_CRON_NONE="Kein Cron-Job"
+INSTALL_CRON_INVALID="Ungültige Auswahl"
+INSTALL_CRON_CUSTOM_PROMPT="Gib das Cron-Zeitformat ein (z.B. '0 3 * * *' für täglich 3 Uhr)"
+INSTALL_CRON_ADDED="Cron-Job erfolgreich hinzugefügt"
+INSTALL_CRON_ERROR="Fehler beim Hinzufügen des Cron-Jobs"
+INSTALL_CRON_CHECK="Prüfe Cron-Jobs mit: sudo crontab -l"
+
+# Abschluss
+INSTALL_COMPLETE="Installation abgeschlossen!"
+INSTALL_TEST_RUN="Du kannst das Update-Script jetzt testen mit:"
+INSTALL_VIEW_LOGS="Logs ansehen:"
+INSTALL_CHANGE_CONFIG="Konfiguration ändern: Führe install.sh erneut aus"
+
+# Ja/Nein Prompts
+INSTALL_YES="J"
+INSTALL_NO="N"

@@ -1,0 +1,78 @@
+#!/bin/bash
+#############################################################
+# English Language File for install.sh
+# Language: English (en)
+#############################################################
+
+# Header
+INSTALL_HEADER="Linux System Update Script - Installation"
+
+# Labels
+INSTALL_LABEL_INFO="INFO"
+INSTALL_LABEL_ERROR="ERROR"
+INSTALL_LABEL_WARNING="WARNING"
+
+# Language Selection
+INSTALL_LANGUAGE_PROMPT="Wähle deine Sprache / Choose your language"
+INSTALL_LANGUAGE_GERMAN="German"
+INSTALL_LANGUAGE_ENGLISH="English"
+INSTALL_LANGUAGE_AUTO="Automatic / Automatisch"
+INSTALL_LANGUAGE_SELECTED="Language selected"
+
+# General
+INSTALL_CONFIG_CREATING="Creating configuration..."
+INSTALL_CONFIG_EXISTS="Existing configuration found"
+INSTALL_CONFIG_SAVED="Configuration saved successfully"
+INSTALL_GENERATED_AT="Generated on"
+
+# Email
+INSTALL_EMAIL_ENABLE="Enable email notifications?"
+INSTALL_EMAIL_ADDRESS="Email address for notifications"
+INSTALL_EMAIL_SAVED="Email address saved"
+INSTALL_EMAIL_EMPTY="Email address cannot be empty"
+INSTALL_EMAIL_NO_PROGRAM="No mail program found (mail/sendmail)"
+INSTALL_EMAIL_REQUIREMENTS="For email notifications you need:"
+INSTALL_EMAIL_REQ_CLIENT="Mail client (mail or mailx)"
+INSTALL_EMAIL_REQ_MTA="MTA (Mail Transfer Agent) like postfix or ssmtp"
+INSTALL_EMAIL_INSTALLATION="Installation:"
+INSTALL_EMAIL_SIMPLE="For simple configuration (e.g. Gmail) use ssmtp instead of postfix."
+INSTALL_EMAIL_LATER="You can install this now or add it later."
+INSTALL_EMAIL_CONTINUE="Continue with email notifications anyway?"
+INSTALL_EMAIL_ENABLED="Email notifications enabled (mail program needs to be installed)"
+INSTALL_EMAIL_DISABLED="Email notifications disabled"
+
+# Reboot
+INSTALL_REBOOT_ENABLE="Enable automatic reboot (if required)?"
+INSTALL_REBOOT_WARNING="System will be automatically rebooted when updates require it!"
+
+# Log Directory
+INSTALL_LOG_DEFAULT="Default log directory"
+INSTALL_LOG_CHANGE="Do you want to change the log directory?"
+INSTALL_LOG_NEW="New log directory"
+INSTALL_LOG_CHANGED="Log directory changed to"
+INSTALL_LOG_CREATE_FAILED="Could not create log directory"
+INSTALL_LOG_CREATE_TRY="Try with sudo"
+
+# Cron Job
+INSTALL_CRON_SETUP="Do you want to set up an automatic cron job?"
+INSTALL_CRON_FREQUENCY="How often should updates be performed?"
+INSTALL_CRON_DAILY="Daily (3:00 AM)"
+INSTALL_CRON_WEEKLY="Weekly (Sunday, 3:00 AM)"
+INSTALL_CRON_MONTHLY="Monthly (1st of month, 3:00 AM)"
+INSTALL_CRON_CUSTOM="Custom"
+INSTALL_CRON_NONE="No cron job"
+INSTALL_CRON_INVALID="Invalid selection"
+INSTALL_CRON_CUSTOM_PROMPT="Enter cron time format (e.g. '0 3 * * *' for daily at 3 AM)"
+INSTALL_CRON_ADDED="Cron job added successfully"
+INSTALL_CRON_ERROR="Error adding cron job"
+INSTALL_CRON_CHECK="Check cron jobs with: sudo crontab -l"
+
+# Completion
+INSTALL_COMPLETE="Installation complete!"
+INSTALL_TEST_RUN="You can now test the update script with:"
+INSTALL_VIEW_LOGS="View logs:"
+INSTALL_CHANGE_CONFIG="Change configuration: Run install.sh again"
+
+# Yes/No Prompts
+INSTALL_YES="Y"
+INSTALL_NO="N"

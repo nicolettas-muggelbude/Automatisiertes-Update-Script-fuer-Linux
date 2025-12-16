@@ -18,6 +18,49 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/config.conf"
 UPDATE_SCRIPT="${SCRIPT_DIR}/update.sh"
 
+# Sprache auswählen und laden
+select_and_load_language() {
+    echo -e "${BLUE}=================================================${NC}"
+    echo -e "${BLUE}   Wähle deine Sprache / Choose your language${NC}"
+    echo -e "${BLUE}=================================================${NC}"
+    echo
+    echo "  1) Deutsch (de)"
+    echo "  2) English (en)"
+    echo "  3) Auto-detect / Automatisch"
+    echo
+    read -p "Selection / Auswahl [1-3]: " lang_choice
+
+    case "$lang_choice" in
+        1) INSTALLER_LANGUAGE="de" ;;
+        2) INSTALLER_LANGUAGE="en" ;;
+        3|"")
+            # Auto-detect
+            INSTALLER_LANGUAGE="${LANG%%.*}"
+            INSTALLER_LANGUAGE="${INSTALLER_LANGUAGE%%_*}"
+            INSTALLER_LANGUAGE="${INSTALLER_LANGUAGE:-en}"
+            ;;
+        *) INSTALLER_LANGUAGE="en" ;;
+    esac
+
+    # Sprachdatei für Installer laden
+    local install_lang_file="${SCRIPT_DIR}/lang/install-${INSTALLER_LANGUAGE}.lang"
+    if [ -f "$install_lang_file" ]; then
+        source "$install_lang_file"
+    else
+        # Fallback zu Englisch
+        source "${SCRIPT_DIR}/lang/install-en.lang" 2>/dev/null || {
+            echo "ERROR: No language files found!"
+            exit 1
+        }
+    fi
+
+    # Update-Script Sprache setzen (wird in config geschrieben)
+    LANGUAGE="$INSTALLER_LANGUAGE"
+}
+
+# Sprache initialisieren
+select_and_load_language
+
 #############################################################
 # Funktionen
 #############################################################
@@ -25,21 +68,21 @@ UPDATE_SCRIPT="${SCRIPT_DIR}/update.sh"
 print_header() {
     clear
     echo -e "${BLUE}=================================================${NC}"
-    echo -e "${BLUE}   Linux System Update Script - Installation${NC}"
+    echo -e "${BLUE}   ${INSTALL_HEADER}${NC}"
     echo -e "${BLUE}=================================================${NC}"
     echo
 }
 
 print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+    echo -e "${GREEN}[${INSTALL_LABEL_INFO}]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}[FEHLER]${NC} $1"
+    echo -e "${RED}[${INSTALL_LABEL_ERROR}]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[WARNUNG]${NC} $1"
+    echo -e "${YELLOW}[${INSTALL_LABEL_WARNING}]${NC} $1"
 }
 
 # Ja/Nein-Frage
@@ -90,7 +133,7 @@ ask_input() {
 # Konfiguration laden (falls vorhanden)
 load_existing_config() {
     if [ -f "$CONFIG_FILE" ]; then
-        print_info "Bestehende Konfiguration gefunden"
+        print_info "$INSTALL_CONFIG_EXISTS"
         source "$CONFIG_FILE"
         return 0
     fi
@@ -187,7 +230,10 @@ create_config() {
     # Konfigurationsdatei schreiben
     cat > "$CONFIG_FILE" << EOF
 # Update-Script Konfiguration
-# Generiert am: $(date)
+# $INSTALL_GENERATED_AT: $(date)
+
+# Sprache / Language (auto|de|en)
+LANGUAGE=$LANGUAGE
 
 # E-Mail-Benachrichtigung aktivieren (true/false)
 ENABLE_EMAIL=$enable_email
@@ -202,7 +248,7 @@ LOG_DIR="$log_dir"
 AUTO_REBOOT=$auto_reboot
 EOF
 
-    print_info "Konfiguration gespeichert: $CONFIG_FILE"
+    print_info "$INSTALL_CONFIG_SAVED: $CONFIG_FILE"
     echo
 
     # Log-Verzeichnis erstellen
