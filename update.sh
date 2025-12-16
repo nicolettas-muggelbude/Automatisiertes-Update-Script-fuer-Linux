@@ -3,6 +3,7 @@
 #############################################################
 # Linux System Update Script
 # Unterstützt: Debian, Ubuntu, Mint, RHEL, Fedora, SUSE
+# Solus, Arch, Void
 # MIT License
 ############################################################# 
 

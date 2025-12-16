@@ -169,7 +169,7 @@ Für die Verwendung:
 
 ## Version
 
-### Unreleased (in Entwicklung)
+### 1.3.0 (2025-12-16)
 **Neue Features:**
 - Solus Unterstützung hinzugefügt (PR #3 von @mrtoadie)
   - Neue `update_solus()` Funktion
@@ -178,8 +178,13 @@ Für die Verwendung:
   - Neue `update_void()` Funktion
   - Verwendet `xbps-install -Su -y`
 
+**Verbesserungen:**
+- Code-Qualität verbessert durch Behebung von ShellCheck-Warnungen
+- Syntax-Fehler in `update_solus()` und `update_void()` behoben
+
 **Dokumentation:**
 - README.md, install.sh und claude.md mit Solus und Void Linux aktualisiert
+- GitHub Repository professionell eingerichtet (Issue Templates, PR Template, GitHub Actions)
 
 ### 1.2.0 (2025-11-09)
 **Neue Features:**

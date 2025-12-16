@@ -387,17 +387,17 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.2.0 (2025-11-09)
+### Aktuelle Version: 1.3.0 (2025-12-16)
 
 **Highlights:**
-- ✅ **NEU: Arch Linux Unterstützung** (Arch, Manjaro, EndeavourOS, Garuda, ArcoLinux)
+- ✅ **NEU: Solus Unterstützung** (Community Beitrag von @mrtoadie)
+- ✅ **NEU: Void Linux Unterstützung** (Community Beitrag von @tbreswald)
+- ✅ Verbesserte Code-Qualität durch Behebung von ShellCheck-Warnungen
+- ✅ GitHub Repository professionell eingerichtet (Issue Templates, PR Template, GitHub Actions)
+
+**Version 1.2.0:**
+- ✅ Arch Linux Unterstützung (Arch, Manjaro, EndeavourOS, Garuda, ArcoLinux)
 - ✅ Verbesserte E-Mail-Benachrichtigung mit Exit-Code-Prüfung
 - ✅ Erweiterte Fehlerbehandlung bei fehlender MTA-Konfiguration
-- ✅ Ausführliche E-Mail-Konfigurationsanleitung in der Dokumentation
-
-**Version 1.1.0:**
-- ✅ Interaktives Log-Viewer-Script
-- ✅ Behobene Cron-Job-Einrichtung
-- ✅ Verbesserte Input-Verarbeitung
 
 **Siehe [CHANGELOG.md](CHANGELOG.md) für alle Details**

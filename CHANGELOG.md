@@ -7,6 +7,8 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-12-16
+
 ### Hinzugefügt
 - **Solus Unterstützung**: Neue `update_solus()` Funktion (PR #3, danke @mrtoadie)
   - Verwendet `eopkg update-repo` und `eopkg upgrade -y`
@@ -15,8 +17,13 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - Verwendet `xbps-install -Su -y`
   - Vollautomatische System-Updates für Void-basierte Distributionen
 
+### Geändert
+- Code-Qualität verbessert durch Behebung von ShellCheck-Warnungen
+- Syntax-Fehler in `update_solus()` und `update_void()` behoben
+
 ### Dokumentation
 - README.md: Solus und Void Linux zu unterstützten Distributionen hinzugefügt
+- GitHub Repository professionell eingerichtet (Issue Templates, PR Template, GitHub Actions)
 
 ## [1.2.0] - 2025-11-09
 
@@ -142,6 +149,7 @@ Das Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/):
 - **MINOR** (x.1.x): Neue Funktionen (abwärtskompatibel)
 - **PATCH** (x.x.1): Bugfixes (abwärtskompatibel)
 
+[1.3.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/releases/tag/v1.0.0
