@@ -2,12 +2,47 @@
 
 Geplante Features und Verbesserungen für zukünftige Versionen.
 
-## Version 1.5.0 - Upgrade-Check System
+## Version 1.5.0 - Sicherheit & Upgrade-Check
 
-### Motivation
+### ✅ Bereits implementiert
+
+#### Kernel-Schutz für autoremove
+**Status:** ✅ Implementiert (bereit für v1.5.0)
+
+**Motivation:**
+Verhindert versehentliches Entfernen von Fallback-Kerneln, die nach fehlgeschlagenen Updates zum Booten benötigt werden.
+
+**Features:**
+- Intelligente Zählung stabiler Kernel-Versionen
+- Prüfung vor jedem `autoremove`-Aufruf
+- Konfigurierbare Mindestanzahl (Standard: 3 Kernel)
+- Unterstützung für Debian/Ubuntu und RHEL/Fedora
+- Mehrsprachige Warn- und Info-Meldungen
+
+**Konfiguration:**
+```bash
+# Kernel-Schutz aktivieren/deaktivieren
+KERNEL_PROTECTION=true
+
+# Minimale Anzahl stabiler Kernel
+# 3 = aktuell laufend + 2 Fallback-Versionen
+MIN_KERNELS=3
+```
+
+**Sicherheitsvorteile:**
+- ✅ Verhindert Bootprobleme durch fehlende Fallback-Kernel
+- ✅ Bewahrt mindestens 2 stabile Kernel-Versionen
+- ✅ Überspringt autoremove bei zu wenigen Kerneln
+- ✅ Transparentes Logging aller Entscheidungen
+
+---
+
+### 🔄 Geplante Features
+
+#### Upgrade-Check System
+
+**Motivation:**
 Einige Distributionen (besonders Rolling Releases wie Solus) bieten nicht automatisch ein Upgrade auf neue Versionen an. Ein Upgrade-Check würde Users darüber informieren und optional das Upgrade durchführen.
-
-### Geplante Features
 
 #### 1. Upgrade-Check Framework
 ```bash
@@ -190,4 +225,4 @@ Features werden priorisiert nach:
 
 **Hinweis:** Diese Roadmap ist nicht final und kann sich ändern basierend auf Community-Feedback und Ressourcen.
 
-Letzte Aktualisierung: 2025-12-16
+Letzte Aktualisierung: 2025-12-24
