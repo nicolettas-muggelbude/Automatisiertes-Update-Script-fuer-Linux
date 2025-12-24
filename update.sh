@@ -23,6 +23,8 @@ EMAIL_RECIPIENT=""
 LOG_DIR="/var/log/system-updates"
 AUTO_REBOOT=false
 LANGUAGE=auto
+KERNEL_PROTECTION=true
+MIN_KERNELS=3
 
 # Konfiguration laden, falls vorhanden
 if [ -f "$CONFIG_FILE" ]; then
@@ -104,6 +106,7 @@ log_warning() {
 # Distribution erkennen
 detect_distro() {
     if [ -f /etc/os-release ]; then
+        # shellcheck source=/dev/null
         . /etc/os-release
         DISTRO=$ID
         VERSION=$VERSION_ID
@@ -150,6 +153,97 @@ send_email() {
     fi
 }
 
+# Zählt stabile Kernel-Versionen (Debian/Ubuntu)
+count_stable_kernels_debian() {
+    # Zähle installierte linux-image Pakete (keine RC, unsigned, etc.)
+    local kernel_count
+    kernel_count=$(dpkg -l 2>/dev/null | grep -c "^ii.*linux-image-[0-9]" || echo "0")
+    echo "$kernel_count"
+}
+
+# Zählt stabile Kernel-Versionen (RHEL/Fedora)
+count_stable_kernels_redhat() {
+    local kernel_count
+    if command -v dnf &> /dev/null; then
+        kernel_count=$(dnf list installed kernel 2>/dev/null | grep -c "^kernel" || echo "0")
+    elif command -v rpm &> /dev/null; then
+        kernel_count=$(rpm -q kernel 2>/dev/null | grep -c "^kernel" || echo "0")
+    else
+        kernel_count=0
+    fi
+    echo "$kernel_count"
+}
+
+# Sicheres autoremove mit Kernel-Schutz
+# Parameter: $1 = Paketmanager (apt, dnf, yum)
+safe_autoremove() {
+    local pkg_manager="$1"
+    local kernel_count=0
+    local min_kernels="${MIN_KERNELS:-3}"
+    local current_kernel
+    current_kernel=$(uname -r)
+
+    # Wenn Kernel-Schutz deaktiviert ist, autoremove ohne Prüfung ausführen
+    if [ "$KERNEL_PROTECTION" != "true" ]; then
+        case "$pkg_manager" in
+            apt)
+                apt-get autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                ;;
+            dnf)
+                dnf autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                ;;
+            yum)
+                yum autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                ;;
+        esac
+        return 0
+    fi
+
+    log_info "$MSG_KERNEL_CHECK"
+
+    # Kernel zählen je nach Distribution
+    case "$pkg_manager" in
+        apt)
+            kernel_count=$(count_stable_kernels_debian)
+            ;;
+        dnf|yum)
+            kernel_count=$(count_stable_kernels_redhat)
+            ;;
+        *)
+            log_warning "Unknown package manager: $pkg_manager"
+            return 1
+            ;;
+    esac
+
+    # Kernel-Informationen loggen
+    # shellcheck disable=SC2059
+    printf "$MSG_KERNEL_COUNT\n" "$kernel_count" | tee -a "$LOG_FILE"
+    # shellcheck disable=SC2059
+    printf "$MSG_KERNEL_CURRENT\n" "$current_kernel" | tee -a "$LOG_FILE"
+
+    # Prüfen ob genügend Kernel vorhanden sind
+    if [ "$kernel_count" -ge "$min_kernels" ]; then
+        log_info "$MSG_KERNEL_SAFE_AUTOREMOVE"
+        case "$pkg_manager" in
+            apt)
+                apt-get autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                ;;
+            dnf)
+                dnf autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                ;;
+            yum)
+                yum autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                ;;
+        esac
+    else
+        # shellcheck disable=SC2059
+        printf "$MSG_KERNEL_SKIP_AUTOREMOVE\n" "$kernel_count" | tee -a "$LOG_FILE"
+        # shellcheck disable=SC2059
+        printf "$MSG_KERNEL_MIN_REQUIRED\n" "$min_kernels" | tee -a "$LOG_FILE"
+        log_warning "$MSG_KERNEL_PROTECTION"
+    fi
+}
+
 # Update für Debian/Ubuntu/Mint
 update_debian() {
     log_info "$MSG_UPDATE_START_DEBIAN"
@@ -167,7 +261,7 @@ update_debian() {
     fi
 
     apt-get dist-upgrade -y 2>&1 | tee -a "$LOG_FILE"
-    apt-get autoremove -y 2>&1 | tee -a "$LOG_FILE"
+    safe_autoremove "apt"
     apt-get autoclean -y 2>&1 | tee -a "$LOG_FILE"
 
     log_info "$MSG_UPDATE_SUCCESS"
@@ -185,7 +279,7 @@ update_redhat() {
             log_error "$MSG_DNF_FAILED"
             return 1
         fi
-        dnf autoremove -y 2>&1 | tee -a "$LOG_FILE"
+        safe_autoremove "dnf"
     elif command -v yum &> /dev/null; then
         yum check-update 2>&1 | tee -a "$LOG_FILE"
         yum update -y 2>&1 | tee -a "$LOG_FILE"
@@ -193,7 +287,7 @@ update_redhat() {
             log_error "$MSG_YUM_FAILED"
             return 1
         fi
-        yum autoremove -y 2>&1 | tee -a "$LOG_FILE"
+        safe_autoremove "yum"
     else
         log_error "$MSG_NO_PKG_MANAGER"
         return 1

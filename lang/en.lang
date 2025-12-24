@@ -76,6 +76,15 @@ EMAIL_BODY_SUCCESS="System update completed successfully"
 EMAIL_BODY_FAILED="System update failed!"
 EMAIL_BODY_CHECK_LOG="Please check the log file!"
 
+# Kernel Protection
+MSG_KERNEL_CHECK="Checking installed kernel versions"
+MSG_KERNEL_COUNT="Found: %d stable kernel versions"
+MSG_KERNEL_CURRENT="Currently running: %s"
+MSG_KERNEL_SAFE_AUTOREMOVE="Sufficient kernels available, running autoremove"
+MSG_KERNEL_SKIP_AUTOREMOVE="WARNING: Only %d kernels found, skipping autoremove for safety"
+MSG_KERNEL_MIN_REQUIRED="Minimum required: %d stable kernels (current + fallbacks)"
+MSG_KERNEL_PROTECTION="Kernel protection active: At least 2 stable kernels will be kept"
+
 # Language Info
 LANGUAGE_NAME="English"
 LANGUAGE_CODE="en"

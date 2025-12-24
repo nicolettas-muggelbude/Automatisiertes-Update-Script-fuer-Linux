@@ -18,3 +18,12 @@ LOG_DIR="/var/log/system-updates"
 # Automatischer Neustart bei Bedarf (true/false)
 # WARNUNG: System wird automatisch neu gestartet, wenn Updates dies erfordern
 AUTO_REBOOT=false
+
+# Kernel-Schutz (true/false)
+# Verhindert autoremove wenn zu wenige Kernel installiert sind
+# Schützt vor versehentlichem Entfernen aller Fallback-Kernel
+KERNEL_PROTECTION=true
+
+# Minimale Anzahl stabiler Kernel (Standard: 3)
+# Empfohlen: 3 = aktuell laufender Kernel + 2 Fallback-Versionen
+MIN_KERNELS=3
