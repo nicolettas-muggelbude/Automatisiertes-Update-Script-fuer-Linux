@@ -91,7 +91,8 @@ get_latest_log() {
         return 1
     fi
 
-    local latest=$(ls -t "$LOG_DIR"/update_*.log 2>/dev/null | head -n 1)
+    local latest
+    latest=$(find "$LOG_DIR" -maxdepth 1 -name "update_*.log" -type f -printf "%T@ %p\n" 2>/dev/null | sort -rn | head -n 1 | cut -d' ' -f2-)
     if [ -z "$latest" ]; then
         return 1
     fi
@@ -106,9 +107,7 @@ show_full_log() {
     echo -e "${GREEN}${VIEWER_NEWEST_LOG}${NC}\n"
 
     local logfile
-    logfile=$(get_latest_log)
-
-    if [ $? -ne 0 ] || [ -z "$logfile" ]; then
+    if ! logfile=$(get_latest_log) || [ -z "$logfile" ]; then
         print_error "$VIEWER_NO_LOGS: $LOG_DIR"
         echo
         echo "$VIEWER_CAUSES"
@@ -140,9 +139,7 @@ show_tail_log() {
     echo -e "${GREEN}${VIEWER_LAST_50}${NC}\n"
 
     local logfile
-    logfile=$(get_latest_log)
-
-    if [ $? -ne 0 ] || [ -z "$logfile" ]; then
+    if ! logfile=$(get_latest_log) || [ -z "$logfile" ]; then
         print_error "$VIEWER_NO_LOGS: $LOG_DIR"
         echo
         echo "$VIEWER_CAUSES"
@@ -192,13 +189,18 @@ list_all_logs() {
     echo -e "${CYAN}${VIEWER_TABLE_DATETIME}${NC}           ${CYAN}${VIEWER_TABLE_SIZE}${NC}    ${CYAN}${VIEWER_TABLE_FILENAME}${NC}"
     echo "-----------------------------------------------------------"
 
-    ls -lth "${logs[@]}" 2>/dev/null | awk '{
-        # Datum und Zeit
-        datetime = $6 " " $7 " " $8
+    # Sortiere Logs nach Änderungszeit und zeige sie an
+    for log in "${logs[@]}"; do
+        if [ -f "$log" ]; then
+            stat -c "%y %s %n" "$log" 2>/dev/null
+        fi
+    done | sort -r | awk '{
+        # Datum und Zeit (YYYY-MM-DD HH:MM:SS)
+        datetime = $1 " " substr($2, 1, 8)
         # Größe
-        size = $5
+        size = $3
         # Dateiname (nur Basename)
-        split($9, arr, "/")
+        split($4, arr, "/")
         filename = arr[length(arr)]
 
         printf "%-20s %-8s %s\n", datetime, size, filename

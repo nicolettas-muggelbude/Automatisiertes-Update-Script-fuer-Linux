@@ -7,7 +7,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [1.4.0] - TBD
+## [1.4.0] - 2025-12-24
 
 ### Hinzugefügt
 - **Mehrsprachigkeit (i18n)**: Vollständige Unterstützung für mehrere Sprachen
@@ -34,6 +34,14 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 ### Geändert
 - Alle Log-Ausgaben verwenden jetzt Variablen statt hart-codierte Strings
 - Log-Level Labels ([INFO], [ERROR], [WARNING]) sind jetzt mehrsprachig
+
+### Behoben
+- **ShellCheck-Warnungen**: Alle ShellCheck-Warnungen in install.sh und log-viewer.sh behoben
+  - SC2162: `read` ohne `-r` Flag
+  - SC1090/SC1091: Source-Direktiven für dynamische Dateien
+  - SC2155: Deklaration und Zuweisung getrennt
+  - SC2181: Exit-Code direkt prüfen statt `$?`
+  - SC2012: `find` statt `ls` für robuste Datei-Operationen
 
 ### Dokumentation
 - README.md: Neue Sektion "Mehrsprachigkeit" mit vollständiger Anleitung

@@ -28,7 +28,7 @@ select_and_load_language() {
     echo "  2) English (en)"
     echo "  3) Auto-detect / Automatisch"
     echo
-    read -p "Selection / Auswahl [1-3]: " lang_choice
+    read -r -p "Selection / Auswahl [1-3]: " lang_choice
 
     case "$lang_choice" in
         1) INSTALLER_LANGUAGE="de" ;;
@@ -295,6 +295,7 @@ setup_cron() {
     # Log-Verzeichnis aus Config laden
     local log_dir="/var/log/system-updates"
     if [ -f "$CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
         source "$CONFIG_FILE"
         log_dir="${LOG_DIR:-/var/log/system-updates}"
     fi
@@ -416,6 +417,7 @@ test_script() {
     echo
     echo "--- Distribution ---"
     if [ -f /etc/os-release ]; then
+        # shellcheck source=/dev/null
         . /etc/os-release
         echo "Distribution: $NAME $VERSION"
         echo "ID: $ID"
