@@ -399,22 +399,169 @@ BACKUP_RETENTION=3
 
 ---
 
-## Version 2.0.0 - Major Features
+## Version 2.0.0 - Major Refactoring & Enterprise Features
 
-### Container-Support
+⚠️ **Breaking Changes:** Version 2.0.0 ist eine Major-Version mit Breaking Changes zur Codebasis-Modernisierung.
+
+### 🏗️ Code-Architektur Refactoring (Priority)
+
+**Motivation:**
+Nach v1.8.0 wird `update.sh` voraussichtlich >1000 Zeilen haben. Für Enterprise-Features (Container, Multi-System) ist eine modulare Architektur erforderlich.
+
+#### 1. Neue modulare Struktur
+
+**Aktuell (v1.5.0 - v1.8.0):**
+```
+update-script/
+├── update.sh              # Monolithisch (~1200 Zeilen nach v1.8)
+├── config.conf
+└── lang/
+```
+
+**Neu (v2.0.0):**
+```
+update-script/
+├── update.sh              # Hauptscript (klein, nur Orchestrierung)
+├── config.conf            # Konfiguration
+├── lib/                   # Modulare Bibliotheken
+│   ├── core.sh           # Basis-Funktionen (logging, colors, etc.)
+│   ├── distros.sh        # Distribution-Updates
+│   ├── upgrades.sh       # Upgrade-Check System
+│   ├── kernel.sh         # Kernel-Schutz
+│   ├── notifications.sh  # E-Mail & Desktop-Notifications
+│   ├── hooks.sh          # Pre/Post-Update Hooks
+│   ├── backup.sh         # Backup-Integration
+│   ├── containers.sh     # Container-Support (neu)
+│   └── remote.sh         # Multi-System Management (neu)
+├── lang/                  # Sprachdateien (bleibt unverändert)
+└── tests/                 # Unit-Tests (neu!)
+    ├── test_core.sh
+    ├── test_distros.sh
+    ├── test_upgrades.sh
+    └── test_notifications.sh
+```
+
+#### 2. Test-Framework
+
+**Framework:** [bats-core](https://github.com/bats-core/bats-core) (Bash Automated Testing System)
+
+**Beispiel Test:**
+```bash
+# tests/test_upgrades.sh
+@test "check_upgrade_debian detects available upgrade" {
+  # Mock do-release-upgrade output
+  function do-release-upgrade() {
+    echo "New release '24.04' available."
+  }
+  export -f do-release-upgrade
+
+  run check_upgrade_debian
+  [ "$status" -eq 3 ]  # Return code 3 = Upgrade available
+}
+```
+
+**Ziel:** >80% Test-Coverage
+
+#### 3. Migration-Strategie
+
+**Backwards-Compatibility:**
+- `update.sh` bleibt Haupteinstiegspunkt
+- Alte `config.conf` wird automatisch konvertiert
+- Migration-Script: `migrate-to-v2.sh`
+
+**Migration-Guide:**
+```bash
+# Automatische Migration
+sudo ./migrate-to-v2.sh
+
+# Manuelle Migration
+cp config.conf config.conf.backup
+./update.sh --migrate-config
+```
+
+#### 4. Vorteile der neuen Architektur
+
+**Entwicklung:**
+- ✅ Modulare Entwicklung (Contributors arbeiten parallel)
+- ✅ Unit-Tests für jedes Modul
+- ✅ Wiederverwendbare Komponenten
+- ✅ Klare Verantwortlichkeiten (SoC - Separation of Concerns)
+
+**Wartung:**
+- ✅ Einfacheres Debugging
+- ✅ Bessere Code-Navigation
+- ✅ Weniger Merge-Konflikte
+- ✅ Schnellere Feature-Entwicklung
+
+**Qualität:**
+- ✅ Höhere Test-Coverage
+- ✅ Bessere Dokumentation pro Modul
+- ✅ ShellCheck pro Datei
+- ✅ Code-Reviews fokussierter
+
+#### 5. Breaking Changes
+
+**Was ändert sich für User:**
+- ⚠️ Installation erfordert `lib/` Verzeichnis
+- ⚠️ Custom-Scripts müssen angepasst werden (wenn sie update.sh sourcen)
+- ⚠️ Neue Abhängigkeit: bats-core (optional, nur für Tests)
+
+**Was bleibt gleich:**
+- ✅ `sudo ./update.sh` funktioniert weiterhin
+- ✅ `config.conf` Format bleibt kompatibel
+- ✅ Alle Features bleiben erhalten
+- ✅ Logs im gleichen Format
+
+#### 6. Implementierungs-Roadmap
+
+**Phase 1:** Planung & Design (vor v2.0.0 Beta)
+- Modul-Grenzen definieren
+- API-Schnittstellen dokumentieren
+- Test-Strategie ausarbeiten
+
+**Phase 2:** Refactoring (v2.0.0 Beta 1)
+- Funktionen in Module aufteilen
+- Tests schreiben
+- CI/CD für Tests einrichten
+
+**Phase 3:** Testing & Migration (v2.0.0 Beta 2)
+- Community-Testing
+- Migration-Script entwickeln
+- Dokumentation aktualisieren
+
+**Phase 4:** Release (v2.0.0 Stable)
+- Migration-Guide veröffentlichen
+- Breaking Changes dokumentieren
+- Support für v1.x für 6 Monate
+
+---
+
+### 🐳 Container-Support
+
+**Nach Refactoring implementiert in `lib/containers.sh`**
+
 - Docker Container Updates
 - LXC Container Updates
 - Podman Integration
+- Container-Erkennung und automatische Updates
 
-### Multi-System Management
+### 🌐 Multi-System Management
+
+**Nach Refactoring implementiert in `lib/remote.sh`**
+
 - Mehrere Systeme zentral verwalten
 - SSH-basiertes Remote-Update
 - Dashboard für Status-Übersicht
+- Parallele Updates über mehrere Hosts
 
-### Advanced Notifications
+### 📢 Advanced Notifications
+
+**Nach Refactoring erweitert in `lib/notifications.sh`**
+
 - Webhook-Support (Slack, Discord, etc.)
 - Matrix/Element Benachrichtigungen
 - Telegram Bot Integration
+- Custom Notification-Backends
 
 ---
 
@@ -452,6 +599,20 @@ Features werden priorisiert nach:
 - **v1.6.0** 🔄 - Desktop-Benachrichtigungen
 - **v1.7.0** 📋 - Hooks & Automation (Pre/Post-Update Hooks)
 - **v1.8.0** 📋 - Backup-Integration & Optimierungen
-- **v2.0.0** 📋 - Container-Support & Multi-System Management
+- **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
+
+### Architektur-Strategie
+
+**v1.5.0 - v1.8.0:** Monolithische Architektur beibehalten
+- ✅ Aktuell überschaubar und stabil
+- ✅ Einfach für Contributors
+- ✅ Community-Feedback sammeln
+- ✅ Features etablieren
+
+**v2.0.0:** Modulare Architektur
+- 🏗️ Großes Refactoring (Breaking Changes erlaubt)
+- 🏗️ Test-Framework (bats-core, >80% Coverage)
+- 🏗️ Migration-Script für User
+- 🏗️ 6 Monate Support für v1.x
 
 Letzte Aktualisierung: 2025-12-27

@@ -204,14 +204,27 @@ Noch zu tun:
 - Bandwidth-Limit
 - Progress-Anzeige
 
-### v2.0.0 - Major Features
+### v2.0.0 - Major Refactoring & Enterprise Features
 **Status:** 📋 Konzeptphase
 
-**Fokus:**
+**Breaking Changes:** Major-Version mit Code-Architektur Refactoring
+
+**Primär-Fokus: Code-Architektur**
+- 🏗️ Modulare Struktur (lib/ Verzeichnis)
+- 🏗️ Test-Framework (bats-core, >80% Coverage)
+- 🏗️ Migration-Script für v1.x User
+- 🏗️ CI/CD für automatische Tests
+
+**Enterprise-Features:**
 - Container-Support (Docker, LXC, Podman)
-- Multi-System Management
-- SSH-basiertes Remote-Update
+- Multi-System Management (SSH-basiert)
 - Advanced Notifications (Webhooks, Matrix, Telegram)
+- Dashboard für Status-Übersicht
+
+**Strategie:**
+- v1.5.0 - v1.8.0: Monolithisch (stabil, einfach)
+- v2.0.0: Großes Refactoring (Breaking Changes erlaubt)
+- Support für v1.x: 6 Monate nach v2.0.0
 
 Siehe ROADMAP.md für vollständige Details aller Versionen.
 
