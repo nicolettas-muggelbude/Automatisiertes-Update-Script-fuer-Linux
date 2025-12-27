@@ -85,6 +85,29 @@ MSG_KERNEL_SKIP_AUTOREMOVE="WARNING: Only %d kernels found, skipping autoremove 
 MSG_KERNEL_MIN_REQUIRED="Minimum required: %d stable kernels (current + fallbacks)"
 MSG_KERNEL_PROTECTION="Kernel protection active: At least 2 stable kernels will be kept"
 
+# Upgrade Check
+MSG_UPGRADE_CHECK="Checking for available distribution upgrades"
+MSG_UPGRADE_AVAILABLE="Upgrade available: %s → %s"
+MSG_UPGRADE_NO_UPGRADE="No distribution upgrade available"
+MSG_UPGRADE_START="Starting upgrade to %s"
+MSG_UPGRADE_SUCCESS="Distribution upgrade completed successfully"
+MSG_UPGRADE_FAILED="Distribution upgrade failed"
+MSG_UPGRADE_BACKUP_WARNING="WARNING: Create a backup before upgrading!"
+MSG_UPGRADE_CONFIRM="Do you want to perform the upgrade? [y/N]"
+MSG_UPGRADE_CANCELLED="Upgrade cancelled"
+MSG_UPGRADE_INFO="To upgrade run: sudo %s --upgrade"
+MSG_UPGRADE_DRY_RUN="Dry-run mode: No changes will be made"
+MSG_UPGRADE_CHECKING_SOLUS="Checking Solus for new version"
+MSG_UPGRADE_CHECKING_ARCH="Checking Arch for important updates"
+MSG_UPGRADE_CHECKING_DEBIAN="Checking for new Debian/Ubuntu release"
+MSG_UPGRADE_CHECKING_FEDORA="Checking for new Fedora version"
+MSG_UPGRADE_NOT_SUPPORTED="Upgrade check not yet implemented for this distribution"
+MSG_UPGRADE_DISABLED="Upgrade check disabled (ENABLE_UPGRADE_CHECK=false)"
+
+# Email Upgrade
+EMAIL_SUBJECT_UPGRADE="Distribution Upgrade Available"
+EMAIL_BODY_UPGRADE="An upgrade for the distribution is available"
+
 # Language Info
 LANGUAGE_NAME="English"
 LANGUAGE_CODE="en"

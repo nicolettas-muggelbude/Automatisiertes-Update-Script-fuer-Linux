@@ -27,3 +27,16 @@ KERNEL_PROTECTION=true
 # Minimale Anzahl stabiler Kernel (Standard: 3)
 # Empfohlen: 3 = aktuell laufender Kernel + 2 Fallback-Versionen
 MIN_KERNELS=3
+
+# Upgrade-Check aktivieren (true/false)
+# Prüft nach regulären Updates, ob Distribution-Upgrades verfügbar sind
+ENABLE_UPGRADE_CHECK=true
+
+# Automatisches Upgrade durchführen (true/false)
+# WARNUNG: Kann Breaking Changes verursachen! Nur für erfahrene User
+# Empfohlen: false (manuelle Upgrades mit --upgrade Flag)
+AUTO_UPGRADE=false
+
+# Upgrade-Benachrichtigungen per E-Mail (true/false)
+# Sendet E-Mail wenn Distribution-Upgrade verfügbar ist
+UPGRADE_NOTIFY_EMAIL=true

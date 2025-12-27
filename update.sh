@@ -25,6 +25,9 @@ AUTO_REBOOT=false
 LANGUAGE=auto
 KERNEL_PROTECTION=true
 MIN_KERNELS=3
+ENABLE_UPGRADE_CHECK=true
+AUTO_UPGRADE=false
+UPGRADE_NOTIFY_EMAIL=true
 
 # Konfiguration laden, falls vorhanden
 if [ -f "$CONFIG_FILE" ]; then
@@ -244,6 +247,221 @@ safe_autoremove() {
     fi
 }
 
+#############################################################
+# Upgrade-Check Funktionen
+#############################################################
+
+# Solus Upgrade-Check
+check_upgrade_solus() {
+    log_info "$MSG_UPGRADE_CHECKING_SOLUS"
+
+    # Solus verwendet eopkg für Updates
+    # Prüfe auf verfügbare Repository-Updates die eine neue Version signalisieren
+    local repo_info
+    repo_info=$(eopkg lr 2>/dev/null || echo "")
+
+    if [ -z "$repo_info" ]; then
+        log_warning "Konnte Repository-Informationen nicht abrufen"
+        return 1
+    fi
+
+    # Hinweis: Solus ist ein Rolling Release, daher gibt es keine klassischen Version-Upgrades
+    # Wir prüfen auf wichtige Systemupdates
+    local pending_updates
+    pending_updates=$(eopkg list-pending 2>/dev/null | wc -l || echo "0")
+
+    if [ "$pending_updates" -gt 0 ]; then
+        log_info "Solus: $pending_updates ausstehende Updates gefunden"
+        return 2  # Updates verfügbar aber kein Major-Upgrade
+    fi
+
+    log_info "$MSG_UPGRADE_NO_UPGRADE"
+    return 0
+}
+
+# Arch Upgrade-Check
+check_upgrade_arch() {
+    log_info "$MSG_UPGRADE_CHECKING_ARCH"
+
+    # Arch ist ein Rolling Release - prüfe auf wichtige Updates
+    if ! command -v checkupdates &> /dev/null; then
+        log_warning "checkupdates nicht gefunden (pacman-contrib erforderlich)"
+        return 1
+    fi
+
+    local updates
+    updates=$(checkupdates 2>/dev/null | wc -l || echo "0")
+
+    if [ "$updates" -gt 0 ]; then
+        log_info "Arch: $updates verfügbare Updates"
+        return 2  # Updates verfügbar
+    fi
+
+    log_info "$MSG_UPGRADE_NO_UPGRADE"
+    return 0
+}
+
+# Debian/Ubuntu Upgrade-Check
+check_upgrade_debian() {
+    log_info "$MSG_UPGRADE_CHECKING_DEBIAN"
+
+    if ! command -v do-release-upgrade &> /dev/null; then
+        log_warning "do-release-upgrade nicht gefunden"
+        return 1
+    fi
+
+    # Prüfe auf neue Release-Version
+    local check_result
+    check_result=$(do-release-upgrade -c 2>&1 || echo "")
+
+    if echo "$check_result" | grep -q "New release"; then
+        local new_version
+        new_version=$(echo "$check_result" | grep "New release" | sed 's/.*New release //' | sed "s/'//g" | awk '{print $1}')
+        # shellcheck disable=SC2059
+        printf "$MSG_UPGRADE_AVAILABLE\n" "$VERSION" "$new_version" | tee -a "$LOG_FILE"
+
+        # E-Mail-Benachrichtigung
+        if [ "$UPGRADE_NOTIFY_EMAIL" = true ]; then
+            local email_body="$EMAIL_BODY_UPGRADE
+
+Aktuelle Version: $NAME $VERSION
+Neue Version: $new_version
+
+Für Upgrade ausführen:
+sudo $0 --upgrade
+
+$MSG_UPGRADE_BACKUP_WARNING"
+            send_email "$EMAIL_SUBJECT_UPGRADE" "$email_body"
+        fi
+
+        return 3  # Upgrade verfügbar
+    fi
+
+    log_info "$MSG_UPGRADE_NO_UPGRADE"
+    return 0
+}
+
+# Fedora Upgrade-Check
+check_upgrade_fedora() {
+    log_info "$MSG_UPGRADE_CHECKING_FEDORA"
+
+    if ! command -v dnf &> /dev/null; then
+        log_warning "dnf nicht gefunden"
+        return 1
+    fi
+
+    # Prüfe auf neue Fedora-Version
+    local check_result
+    check_result=$(dnf system-upgrade download --refresh --releasever="$((VERSION + 1))" --assumeno 2>&1 || echo "")
+
+    if echo "$check_result" | grep -q "will be installed"; then
+        local new_version=$((VERSION + 1))
+        # shellcheck disable=SC2059
+        printf "$MSG_UPGRADE_AVAILABLE\n" "Fedora $VERSION" "Fedora $new_version" | tee -a "$LOG_FILE"
+
+        # E-Mail-Benachrichtigung
+        if [ "$UPGRADE_NOTIFY_EMAIL" = true ]; then
+            local email_body="$EMAIL_BODY_UPGRADE
+
+Aktuelle Version: Fedora $VERSION
+Neue Version: Fedora $new_version
+
+Für Upgrade ausführen:
+sudo $0 --upgrade
+
+$MSG_UPGRADE_BACKUP_WARNING"
+            send_email "$EMAIL_SUBJECT_UPGRADE" "$email_body"
+        fi
+
+        return 3  # Upgrade verfügbar
+    fi
+
+    log_info "$MSG_UPGRADE_NO_UPGRADE"
+    return 0
+}
+
+# Hauptfunktion: Upgrade-Check
+check_upgrade_available() {
+    # Prüfe ob Upgrade-Check aktiviert ist
+    if [ "$ENABLE_UPGRADE_CHECK" != "true" ]; then
+        log_info "$MSG_UPGRADE_DISABLED"
+        return 0
+    fi
+
+    log_info "$MSG_UPGRADE_CHECK"
+
+    # Distributionsspezifischer Check
+    case "$DISTRO" in
+        solus)
+            check_upgrade_solus
+            return $?
+            ;;
+        arch|manjaro|endeavouros|garuda|arcolinux)
+            check_upgrade_arch
+            return $?
+            ;;
+        debian|ubuntu|linuxmint|mint)
+            check_upgrade_debian
+            return $?
+            ;;
+        fedora)
+            check_upgrade_fedora
+            return $?
+            ;;
+        *)
+            log_info "$MSG_UPGRADE_NOT_SUPPORTED"
+            return 1
+            ;;
+    esac
+}
+
+# Upgrade durchführen
+perform_upgrade() {
+    log_warning "$MSG_UPGRADE_BACKUP_WARNING"
+
+    # Bestätigung einholen (außer bei AUTO_UPGRADE)
+    if [ "$AUTO_UPGRADE" != "true" ]; then
+        echo -n "$MSG_UPGRADE_CONFIRM "
+        read -r response
+        if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+            log_info "$MSG_UPGRADE_CANCELLED"
+            return 1
+        fi
+    fi
+
+    # Distributionsspezifisches Upgrade
+    case "$DISTRO" in
+        debian|ubuntu|linuxmint|mint)
+            # shellcheck disable=SC2059
+            printf "$MSG_UPGRADE_START\n" "neue Version" | tee -a "$LOG_FILE"
+            if do-release-upgrade -f DistUpgradeViewNonInteractive 2>&1 | tee -a "$LOG_FILE"; then
+                log_info "$MSG_UPGRADE_SUCCESS"
+                return 0
+            else
+                log_error "$MSG_UPGRADE_FAILED"
+                return 1
+            fi
+            ;;
+        fedora)
+            local new_version=$((VERSION + 1))
+            # shellcheck disable=SC2059
+            printf "$MSG_UPGRADE_START\n" "Fedora $new_version" | tee -a "$LOG_FILE"
+            if dnf system-upgrade download -y --releasever="$new_version" 2>&1 | tee -a "$LOG_FILE" && \
+               dnf system-upgrade reboot 2>&1 | tee -a "$LOG_FILE"; then
+                log_info "$MSG_UPGRADE_SUCCESS"
+                return 0
+            else
+                log_error "$MSG_UPGRADE_FAILED"
+                return 1
+            fi
+            ;;
+        *)
+            log_error "$MSG_UPGRADE_NOT_SUPPORTED"
+            return 1
+            ;;
+    esac
+}
+
 # Update für Debian/Ubuntu/Mint
 update_debian() {
     log_info "$MSG_UPDATE_START_DEBIAN"
@@ -389,6 +607,34 @@ check_reboot_required() {
 # Hauptprogramm
 #############################################################
 
+# Command-Line Parameter verarbeiten
+UPGRADE_MODE=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --upgrade)
+            UPGRADE_MODE=true
+            shift
+            ;;
+        --help|-h)
+            echo "Linux System Update-Script"
+            echo ""
+            echo "Verwendung: $0 [OPTIONEN]"
+            echo ""
+            echo "Optionen:"
+            echo "  --upgrade    Führt Distribution-Upgrade durch (falls verfügbar)"
+            echo "  --help, -h   Zeigt diese Hilfe an"
+            echo ""
+            exit 0
+            ;;
+        *)
+            echo "Unbekannte Option: $1"
+            echo "Verwende --help für weitere Informationen"
+            exit 1
+            ;;
+    esac
+done
+
 log_info "$MSG_HEADER_START"
 log_info "$MSG_HOSTNAME: $(hostname)"
 log_info "$MSG_KERNEL: $(uname -r)"
@@ -398,6 +644,19 @@ check_root
 
 # Distribution erkennen
 detect_distro
+
+# Wenn Upgrade-Modus, führe Upgrade durch
+if [ "$UPGRADE_MODE" = true ]; then
+    if perform_upgrade; then
+        log_info "$MSG_UPGRADE_SUCCESS"
+        send_email "$EMAIL_SUBJECT_UPGRADE" "$MSG_UPGRADE_SUCCESS"
+        exit 0
+    else
+        log_error "$MSG_UPGRADE_FAILED"
+        send_email "$EMAIL_SUBJECT_FAILED" "$MSG_UPGRADE_FAILED"
+        exit 1
+    fi
+fi
 
 # Update durchführen basierend auf Distribution
 UPDATE_SUCCESS=false
@@ -434,6 +693,19 @@ if [ "$UPDATE_SUCCESS" = true ]; then
 
     # Neustart prüfen
     check_reboot_required
+
+    # Upgrade-Check durchführen
+    check_upgrade_available
+    UPGRADE_CHECK_RESULT=$?
+
+    # Wenn Upgrade verfügbar und AUTO_UPGRADE aktiviert
+    if [ "$UPGRADE_CHECK_RESULT" -eq 3 ] && [ "$AUTO_UPGRADE" = true ]; then
+        log_info "AUTO_UPGRADE aktiviert, starte Upgrade-Prozess"
+        perform_upgrade
+    elif [ "$UPGRADE_CHECK_RESULT" -eq 3 ]; then
+        # shellcheck disable=SC2059
+        printf "$MSG_UPGRADE_INFO\n" "$0" | tee -a "$LOG_FILE"
+    fi
 
     # E-Mail senden
     EMAIL_BODY="$EMAIL_BODY_SUCCESS

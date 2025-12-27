@@ -7,6 +7,84 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2025-12-27
+
+### Hinzugefügt
+- **Upgrade-Check System**: Automatische Erkennung verfügbarer Distribution-Upgrades
+  - `check_upgrade_available()` - Zentrale Funktion für distributionsspezifische Upgrade-Checks
+  - `check_upgrade_solus()` - Solus: Prüft auf ausstehende Updates (Rolling Release)
+  - `check_upgrade_arch()` - Arch/Manjaro: Prüft auf verfügbare Updates (Rolling Release)
+  - `check_upgrade_debian()` - Debian/Ubuntu: Erkennt neue Release-Versionen
+  - `check_upgrade_fedora()` - Fedora: Erkennt neue Fedora-Versionen
+  - `perform_upgrade()` - Führt Distribution-Upgrade mit Bestätigung durch
+  - Automatischer Upgrade-Check nach jedem erfolgreichen Update
+  - E-Mail-Benachrichtigung bei verfügbaren Upgrades
+  - Backup-Warnung vor jedem Upgrade
+  - Benutzer-Bestätigung erforderlich (außer bei AUTO_UPGRADE)
+- **Command-Line Interface Erweiterung**:
+  - `--upgrade` Flag zum manuellen Durchführen von Distribution-Upgrades
+  - `--help` / `-h` Flag für Hilfe-Anzeige
+- **Kernel-Schutz**: Verhindert versehentliches Entfernen von Fallback-Kerneln
+  - `safe_autoremove()` - Sichere autoremove-Funktion mit Kernel-Check
+  - `count_stable_kernels_debian()` - Zählt Kernel auf Debian/Ubuntu
+  - `count_stable_kernels_redhat()` - Zählt Kernel auf RHEL/Fedora
+  - Prüft vor autoremove ob genügend Kernel installiert sind
+  - Konfigurierbare Mindestanzahl (Standard: 3 Kernel)
+  - Überspringt autoremove wenn zu wenige Kernel vorhanden
+  - Detailliertes Logging der Kernel-Informationen
+- **Konfigurationsoptionen** (config.conf):
+  - `KERNEL_PROTECTION` - Kernel-Schutz aktivieren/deaktivieren (default: true)
+  - `MIN_KERNELS` - Minimale Anzahl stabiler Kernel (default: 3)
+  - `ENABLE_UPGRADE_CHECK` - Upgrade-Check aktivieren/deaktivieren (default: true)
+  - `AUTO_UPGRADE` - Automatisches Upgrade durchführen (default: false, WARNUNG!)
+  - `UPGRADE_NOTIFY_EMAIL` - E-Mail bei verfügbarem Upgrade (default: true)
+- **Mehrsprachigkeit**: 18 neue Sprachmeldungen für Upgrade-Check und Kernel-Schutz
+  - Alle Messages in Deutsch (de.lang) und Englisch (en.lang)
+  - MSG_UPGRADE_* - Upgrade-bezogene Meldungen
+  - MSG_KERNEL_* - Kernel-Schutz Meldungen
+  - EMAIL_SUBJECT_UPGRADE / EMAIL_BODY_UPGRADE - E-Mail Templates
+
+### Geändert
+- **update.sh**: Upgrade-Check wird nach erfolgreichem Update automatisch ausgeführt
+- **update.sh**: Kernel-Schutz in allen Distributionen mit autoremove integriert
+- **update.sh**: Hauptprogramm unterstützt Command-Line Parameter
+- **E-Mail-Benachrichtigungen**: Upgrade-Verfügbarkeit wird per E-Mail gemeldet
+- **Standard-Konfiguration**: Neue Default-Werte für v1.5.0 Features
+
+### Behoben
+- Keine ShellCheck-Warnungen (100% ShellCheck-konform)
+
+### Dokumentation
+- **README.md**: Vollständige Dokumentation des Upgrade-Check Systems
+  - Neue Sektion "Distribution-Upgrade durchführen"
+  - Neue Sektion "Kernel-Schutz" mit Beispielen
+  - Aktualisierte Konfigurationsübersicht
+  - Erweiterte Sicherheitshinweise
+- **ROADMAP.md**: Upgrade-Check System als implementiert markiert
+  - Detaillierte Feature-Beschreibung
+  - Technische Implementierungsdetails
+  - User-Workflows dokumentiert
+  - Status auf "Feature-Complete" gesetzt
+- **.claude/CLAUDE.md**: Projekt-Dokumentation erstellt
+  - Vollständige Implementierungsdetails
+  - Workflow-Beschreibung
+  - Rückgabewerte dokumentiert
+
+### Sicherheit
+- **Kernel-Schutz**: Verhindert Bootprobleme durch fehlende Fallback-Kernel
+- **Upgrade-Warnungen**: Backup-Warnung vor jedem Distribution-Upgrade
+- **Opt-in System**: AUTO_UPGRADE standardmäßig deaktiviert
+- **Benutzer-Bestätigung**: Manuelle Bestätigung vor kritischen Upgrades
+
+### Technische Details
+- Upgrade-Check Rückgabewerte:
+  - `0` - Kein Upgrade verfügbar
+  - `1` - Fehler oder nicht unterstützt
+  - `2` - Updates verfügbar (Rolling Release)
+  - `3` - Major-Upgrade verfügbar
+- Kernel-Schutz unterstützt Debian/Ubuntu (dpkg) und RHEL/Fedora (dnf/rpm)
+- Distribution-Upgrades für Debian/Ubuntu (do-release-upgrade) und Fedora (dnf system-upgrade)
+
 ## [1.4.0] - 2025-12-24
 
 ### Hinzugefügt
@@ -195,6 +273,7 @@ Das Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/):
 - **MINOR** (x.1.x): Neue Funktionen (abwärtskompatibel)
 - **PATCH** (x.x.1): Bugfixes (abwärtskompatibel)
 
+[1.5.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.1.0...v1.2.0

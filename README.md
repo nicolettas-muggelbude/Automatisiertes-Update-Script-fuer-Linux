@@ -20,6 +20,8 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 ## Features
 
 - ✅ **Mehrsprachigkeit**: Deutsch und Englisch (weitere Sprachen via Community)
+- ✅ **Upgrade-Check System**: Automatische Erkennung verfügbarer Distribution-Upgrades (v1.5.0)
+- ✅ **Kernel-Schutz**: Verhindert versehentliches Entfernen von Fallback-Kerneln (v1.5.0)
 - ✅ Automatische Distribution-Erkennung
 - ✅ Vollautomatische System-Updates
 - ✅ Detailliertes Logging mit Zeitstempel
@@ -100,6 +102,57 @@ cat config.conf
 sudo ./update.sh
 ```
 
+Das Script führt automatisch folgende Schritte durch:
+1. System-Updates installieren
+2. Prüfung auf verfügbare Distribution-Upgrades
+3. Optional: E-Mail-Benachrichtigung versenden
+
+### Distribution-Upgrade durchführen
+
+**NEU in v1.5.0:** Das Script kann jetzt auch Distribution-Upgrades erkennen und durchführen.
+
+#### Automatischer Upgrade-Check
+
+Nach jedem erfolgreichen Update prüft das Script automatisch, ob ein Distribution-Upgrade verfügbar ist:
+
+```bash
+sudo ./update.sh
+# [INFO] System-Update erfolgreich abgeschlossen
+# [INFO] Prüfe auf verfügbare Distribution-Upgrades
+# [INFO] Upgrade verfügbar: Ubuntu 22.04 → Ubuntu 24.04
+# [INFO] Für Upgrade ausführen: sudo ./update.sh --upgrade
+```
+
+#### Manuelles Upgrade
+
+Um ein verfügbares Distribution-Upgrade durchzuführen:
+
+```bash
+sudo ./update.sh --upgrade
+```
+
+Das Script zeigt eine Backup-Warnung und fragt nach Bestätigung:
+
+```
+[WARNUNG] Erstelle ein Backup vor dem Upgrade!
+Möchtest du das Upgrade durchführen? [j/N]: j
+[INFO] Starte Upgrade zu Ubuntu 24.04
+[INFO] Distribution-Upgrade erfolgreich abgeschlossen
+```
+
+#### Unterstützte Distribution-Upgrades
+
+- **Debian/Ubuntu**: Erkennt neue Release-Versionen (z.B. Ubuntu 22.04 → 24.04)
+- **Fedora**: Erkennt neue Fedora-Versionen (z.B. Fedora 39 → 40)
+- **Arch/Manjaro**: Prüft auf wichtige Updates (Rolling Release)
+- **Solus**: Prüft auf ausstehende Updates (Rolling Release)
+
+### Hilfe anzeigen
+
+```bash
+sudo ./update.sh --help
+```
+
 ### Automatische Updates via Cron
 
 Während der Installation kannst du einen Cron-Job einrichten. Das Script richtet den Cron-Job automatisch im **root-Crontab** ein (du wirst einmal nach dem sudo-Passwort gefragt).
@@ -175,6 +228,24 @@ LOG_DIR="/var/log/system-updates"
 
 # Automatischer Neustart bei Bedarf (true/false)
 AUTO_REBOOT=false
+
+# Kernel-Schutz (true/false)
+# Verhindert autoremove wenn zu wenige Kernel installiert sind
+KERNEL_PROTECTION=true
+
+# Minimale Anzahl stabiler Kernel (Standard: 3)
+MIN_KERNELS=3
+
+# Upgrade-Check aktivieren (true/false)
+# Prüft nach regulären Updates, ob Distribution-Upgrades verfügbar sind
+ENABLE_UPGRADE_CHECK=true
+
+# Automatisches Upgrade durchführen (true/false)
+# WARNUNG: Kann Breaking Changes verursachen! Nur für erfahrene User
+AUTO_UPGRADE=false
+
+# Upgrade-Benachrichtigungen per E-Mail (true/false)
+UPGRADE_NOTIFY_EMAIL=true
 ```
 
 ### Konfiguration ändern
@@ -389,12 +460,53 @@ sudo chown $USER:$USER /var/log/system-updates
    0 3 * * * /opt/linux-update-script/update.sh
    ```
 
+## Kernel-Schutz
+
+**NEU in v1.5.0:** Das Script schützt automatisch vor versehentlichem Entfernen von Fallback-Kerneln.
+
+### Funktionsweise
+
+- Zählt installierte stabile Kernel-Versionen vor `autoremove`
+- Überspringt `autoremove` wenn weniger als `MIN_KERNELS` vorhanden
+- Standard: Mindestens 3 Kernel (aktuell laufend + 2 Fallback-Versionen)
+- Unterstützt Debian/Ubuntu und RHEL/Fedora
+
+### Beispiel
+
+```bash
+sudo ./update.sh
+# [INFO] Prüfe installierte Kernel-Versionen
+# [INFO] Gefunden: 5 stabile Kernel-Versionen
+# [INFO] Aktuell laufend: 6.5.0-28-generic
+# [INFO] Genügend Kernel vorhanden, führe autoremove aus
+```
+
+Wenn zu wenige Kernel vorhanden:
+
+```bash
+# [WARNUNG] Nur 2 Kernel gefunden, überspringe autoremove zur Sicherheit
+# [INFO] Minimum erforderlich: 3 stabile Kernel (aktuell + Fallbacks)
+# [INFO] Kernel-Schutz aktiv: Mindestens 2 stabile Kernel werden behalten
+```
+
+### Konfiguration
+
+```bash
+# Kernel-Schutz deaktivieren (nicht empfohlen)
+KERNEL_PROTECTION=false
+
+# Mindestanzahl ändern
+MIN_KERNELS=5  # Behält mehr Fallback-Kernel
+```
+
 ## Sicherheitshinweise
 
 - Das Script benötigt root-Rechte für System-Updates
+- **Backup empfohlen** vor Distribution-Upgrades
 - Konfigurationsdatei enthält keine sensiblen Daten
 - E-Mail-Passwörter werden nicht im Script gespeichert
 - Logs können sensible Systeminformationen enthalten
+- Kernel-Schutz verhindert Bootprobleme durch fehlende Fallback-Kernel
 
 ## Deinstallation
 
@@ -427,17 +539,29 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.3.0 (2025-12-16)
+### Aktuelle Version: 1.5.0 (2025-12-27) - Sicherheit & Upgrade-Check
 
 **Highlights:**
-- ✅ **NEU: Solus Unterstützung** (Community Beitrag von @mrtoadie)
-- ✅ **NEU: Void Linux Unterstützung** (Community Beitrag von @tbreswald)
-- ✅ Verbesserte Code-Qualität durch Behebung von ShellCheck-Warnungen
-- ✅ GitHub Repository professionell eingerichtet (Issue Templates, PR Template, GitHub Actions)
+- ✅ **NEU: Upgrade-Check System** - Automatische Erkennung verfügbarer Distribution-Upgrades
+  - Unterstützung für Debian/Ubuntu, Fedora, Arch/Manjaro, Solus
+  - `--upgrade` Flag für manuelle Upgrades
+  - Optionale E-Mail-Benachrichtigung bei verfügbaren Upgrades
+  - Backup-Warnung und Benutzer-Bestätigung
+- ✅ **NEU: Kernel-Schutz** - Verhindert versehentliches Entfernen von Fallback-Kerneln
+  - Intelligente Zählung stabiler Kernel-Versionen
+  - Konfigurierbare Mindestanzahl (Standard: 3 Kernel)
+  - Unterstützung für Debian/Ubuntu und RHEL/Fedora
+- ✅ Erweiterte Konfigurationsoptionen
+- ✅ Verbesserte Mehrsprachigkeit (alle neuen Features in DE/EN)
+- ✅ ShellCheck-konform (keine Warnungen)
 
-**Version 1.2.0:**
-- ✅ Arch Linux Unterstützung (Arch, Manjaro, EndeavourOS, Garuda, ArcoLinux)
-- ✅ Verbesserte E-Mail-Benachrichtigung mit Exit-Code-Prüfung
-- ✅ Erweiterte Fehlerbehandlung bei fehlender MTA-Konfiguration
+**Version 1.4.0:**
+- ✅ ShellCheck-Warnungen behoben
+- ✅ Code-Qualität verbessert
+
+**Version 1.3.0:**
+- ✅ Solus Unterstützung (Community Beitrag von @mrtoadie)
+- ✅ Void Linux Unterstützung (Community Beitrag von @tbreswald)
+- ✅ GitHub Repository professionell eingerichtet
 
 **Siehe [CHANGELOG.md](CHANGELOG.md) für alle Details**

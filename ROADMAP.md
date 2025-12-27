@@ -37,61 +37,52 @@ MIN_KERNELS=3
 
 ---
 
-### 🔄 Geplante Features
+### ✅ Bereits implementiert
 
 #### Upgrade-Check System
+**Status:** ✅ Implementiert (bereit für v1.5.0)
 
 **Motivation:**
-Einige Distributionen (besonders Rolling Releases wie Solus) bieten nicht automatisch ein Upgrade auf neue Versionen an. Ein Upgrade-Check würde Users darüber informieren und optional das Upgrade durchführen.
+Einige Distributionen (besonders Rolling Releases wie Solus) bieten nicht automatisch ein Upgrade auf neue Versionen an. Ein Upgrade-Check informiert Users darüber und ermöglicht optional das Upgrade durchzuführen.
 
-#### 1. Upgrade-Check Framework
-```bash
-check_upgrade_available() {
-    # Distributionsspezifische Upgrade-Checks
-    case "$DISTRO" in
-        solus)
-            check_upgrade_solus
-            ;;
-        arch|manjaro)
-            check_upgrade_arch
-            ;;
-        # ... weitere Distributionen
-    esac
-}
-```
+**Implementierte Features:**
 
-#### 2. Solus Upgrade-Check (Priority)
-```bash
-check_upgrade_solus() {
-    # Prüfen ob neue Solus-Version verfügbar
-    # eopkg upgrade --check oder ähnlich
-    # Bei Verfügbarkeit: User informieren
-    # Optional: Automatisches Upgrade durchführen
-}
-```
+#### 1. Upgrade-Check Framework ✅
+- Zentrale Funktion `check_upgrade_available()`
+- Distributionsspezifische Dispatcher
+- Rückgabewerte für verschiedene Szenarien (kein Upgrade, Updates, Major-Upgrade)
+- Automatische Prüfung nach regulären Updates
 
-**Technische Details:**
-- Solus ist ein Rolling Release, aber Major-Updates erfordern manchmal manuelles Upgrade
-- Check auf neue ISOs oder Major-Versionen
-- Prüfung über eopkg oder System-API
+#### 2. Distributionsspezifische Checks ✅
 
-#### 3. Weitere Distributionen
+**Solus:**
+- `check_upgrade_solus()` - Prüft auf ausstehende Updates
+- Hinweis: Solus ist Rolling Release (keine Major-Versions-Upgrades)
+- Erkennung via `eopkg list-pending`
 
 **Arch/Manjaro:**
-- Check auf neue Kernel-Versionen
-- Hinweis auf manuelle Interventionen (z.B. .pacnew Dateien)
-- AUR-Updates (optional, wenn yay/paru installiert)
+- `check_upgrade_arch()` - Prüft auf verfügbare Updates
+- Verwendet `checkupdates` (aus pacman-contrib)
+- Rolling Release Support
 
 **Debian/Ubuntu:**
-- Check auf neue Distribution-Releases
+- `check_upgrade_debian()` - Prüft auf neue Release-Versionen
 - `do-release-upgrade` Integration
-- LTS → Non-LTS Upgrade-Optionen
+- LTS → Non-LTS Upgrade-Unterstützung
+- E-Mail-Benachrichtigung bei verfügbarem Upgrade
 
 **Fedora:**
-- Check auf neue Fedora-Versionen
+- `check_upgrade_fedora()` - Prüft auf neue Fedora-Versionen
 - `dnf system-upgrade` Integration
+- Automatische Version-Erkennung
 
-### Konfiguration (config.conf)
+#### 3. Upgrade-Durchführung ✅
+- `perform_upgrade()` - Führt Distribution-Upgrade durch
+- Backup-Warnung vor jedem Upgrade
+- Benutzer-Bestätigung (außer bei AUTO_UPGRADE)
+- Distributionsspezifische Upgrade-Befehle
+
+**Konfiguration (config.conf):**
 
 ```bash
 # Upgrade-Check aktivieren (true/false)
@@ -101,67 +92,82 @@ ENABLE_UPGRADE_CHECK=true
 # WARNUNG: Kann Breaking Changes verursachen!
 AUTO_UPGRADE=false
 
-# Upgrade-Benachrichtigung
+# Upgrade-Benachrichtigungen per E-Mail (true/false)
 UPGRADE_NOTIFY_EMAIL=true
-UPGRADE_NOTIFY_LOG=true
 ```
 
-### User-Workflow
+**User-Workflow:**
 
-1. **Automatischer Check während Update:**
+1. **Automatischer Check während Update:** ✅
    ```bash
    sudo ./update.sh
    # [INFO] System-Update abgeschlossen
-   # [INFO] Upgrade verfügbar: Solus 4.4 → Solus 4.5
-   # [INFO] Führe aus: sudo ./update.sh --upgrade
+   # [INFO] Prüfe auf verfügbare Distribution-Upgrades
+   # [INFO] Upgrade verfügbar: Ubuntu 22.04 → Ubuntu 24.04
+   # [INFO] Für Upgrade ausführen: sudo ./update.sh --upgrade
    ```
 
-2. **Manuelles Upgrade:**
+2. **Manuelles Upgrade:** ✅
    ```bash
    sudo ./update.sh --upgrade
-   # [INFO] Starte Upgrade zu Solus 4.5
-   # [WARNUNG] Erstelle Backup vor dem Upgrade!
-   # Fortfahren? [j/N]:
+   # [WARNUNG] Erstelle ein Backup vor dem Upgrade!
+   # Möchtest du das Upgrade durchführen? [j/N]:
+   # [INFO] Starte Upgrade zu Ubuntu 24.04
+   # [INFO] Distribution-Upgrade erfolgreich abgeschlossen
    ```
 
-3. **Automatisches Upgrade (Config):**
+3. **Automatisches Upgrade (Config):** ✅
    ```bash
    # AUTO_UPGRADE=true in config.conf
    sudo ./update.sh
    # Führt automatisch Upgrade durch wenn verfügbar
    ```
 
-### Sicherheitsaspekte
+4. **Hilfe anzeigen:** ✅
+   ```bash
+   sudo ./update.sh --help
+   # Linux System Update-Script
+   # Verwendung: ./update.sh [OPTIONEN]
+   # Optionen:
+   #   --upgrade    Führt Distribution-Upgrade durch (falls verfügbar)
+   #   --help, -h   Zeigt diese Hilfe an
+   ```
 
-- ⚠️ **Backup-Warnung** vor jedem Upgrade
-- ⚠️ **Dry-Run Option** zum Testen
-- ⚠️ **Rollback-Information** in Logs
-- ⚠️ **Opt-in** (standardmäßig nur Benachrichtigung)
+**Sicherheitsaspekte:**
 
-### E-Mail-Benachrichtigung
+- ✅ **Backup-Warnung** vor jedem Upgrade
+- ✅ **Benutzer-Bestätigung** (außer bei AUTO_UPGRADE)
+- ✅ **Rollback-Information** in Logs
+- ✅ **Opt-in** (standardmäßig nur Benachrichtigung)
+- ✅ **ShellCheck-konform** (keine Warnungen)
+
+**E-Mail-Benachrichtigung:** ✅
 
 ```
-Betreff: Upgrade verfügbar für Solus
+Betreff: Distribution-Upgrade verfügbar
 
-Ein Upgrade ist verfügbar:
-Aktuelle Version: Solus 4.4
-Neue Version: Solus 4.5
+Ein Upgrade für die Distribution ist verfügbar
 
-Changelogs: https://getsol.us/2024/...
+Aktuelle Version: Ubuntu 22.04
+Neue Version: Ubuntu 24.04
 
-Zum Upgraden:
+Für Upgrade ausführen:
 sudo /pfad/zum/update.sh --upgrade
 
-Hinweis: Erstelle vor dem Upgrade ein Backup!
+WARNUNG: Erstelle ein Backup vor dem Upgrade!
 ```
 
-### Testing-Strategie
+**Mehrsprachigkeit:** ✅
+- Alle Upgrade-Messages in Deutsch und Englisch
+- Automatische Spracherkennung
+- Konsistente Message-Keys in allen Sprachdateien
 
-1. **Solus** (Priorität - User-Request)
-2. **Arch/Manjaro** (Rolling Release)
-3. **Ubuntu** (LTS Upgrades)
-4. **Fedora** (Versions-Upgrades)
-5. Weitere nach Community-Feedback
+### 🔄 Weitere Verbesserungen für v1.5.0
+
+- [ ] Testing auf echten Systemen (Solus, Arch, Debian, Fedora)
+- [ ] README.md aktualisieren mit Upgrade-Check Dokumentation
+- [ ] CHANGELOG.md für v1.5.0 vorbereiten
+- [ ] Release Notes verfassen
 
 ---
 
@@ -202,7 +208,7 @@ Hinweis: Erstelle vor dem Upgrade ein Backup!
 Features die von der Community gewünscht wurden können hier gesammelt werden.
 
 ### Eingereichete Ideen:
-- [ ] Upgrade-Check System (Solus Priority) - @User Request
+- [x] Upgrade-Check System (Solus Priority) - @User Request - ✅ Implementiert in v1.5.0
 - [ ] ...
 
 ### Wie Ideen einreichen?
@@ -225,4 +231,4 @@ Features werden priorisiert nach:
 
 **Hinweis:** Diese Roadmap ist nicht final und kann sich ändern basierend auf Community-Feedback und Ressourcen.
 
-Letzte Aktualisierung: 2025-12-24
+Letzte Aktualisierung: 2025-12-27
