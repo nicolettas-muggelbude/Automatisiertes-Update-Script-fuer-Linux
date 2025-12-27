@@ -164,6 +164,58 @@ Noch zu tun:
 - CHANGELOG.md vorbereiten
 - Release Notes
 
+## Roadmap - Geplante Versionen
+
+### v1.6.0 - Desktop-Benachrichtigungen
+**Status:** 🔄 Geplant
+
+**Fokus:**
+- Desktop-Benachrichtigungen mit notify-send
+- 4 Notification-Szenarien (Erfolg, Upgrade, Fehler, Neustart)
+- Konfiguration: ENABLE_DESKTOP_NOTIFICATION, NOTIFICATION_TIMEOUT
+- Unterstützung für GNOME, KDE, XFCE, Cinnamon, MATE, etc.
+
+**Herausforderung:** Script läuft als root, Notification für User
+**Lösung:** `sudo -u $SUDO_USER DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=...`
+
+### v1.7.0 - Hooks & Automation
+**Status:** 📋 Konzeptphase
+
+**Fokus:**
+- Pre-Update Hooks (Scripts vor Update ausführen)
+- Post-Update Hooks (Scripts nach Update ausführen)
+- Hook-Verzeichnisse: `/etc/update-hooks/pre.d/` und `/etc/update-hooks/post.d/`
+- Exit-Code-Handling und Timeouts
+
+**Use Cases:**
+- Services vor Update stoppen
+- Backups vor Update erstellen
+- Monitoring pausieren
+- Custom Cleanup nach Update
+
+### v1.8.0 - Backup & Optimierung
+**Status:** 📋 Konzeptphase
+
+**Fokus:**
+- Backup-Integration (LVM, Btrfs, ZFS, Rsync)
+- Automatische Snapshots vor Distribution-Upgrades
+- Backup-Rotation
+- Update-Schedule (Low-Load-Detection)
+- Bandwidth-Limit
+- Progress-Anzeige
+
+### v2.0.0 - Major Features
+**Status:** 📋 Konzeptphase
+
+**Fokus:**
+- Container-Support (Docker, LXC, Podman)
+- Multi-System Management
+- SSH-basiertes Remote-Update
+- Advanced Notifications (Webhooks, Matrix, Telegram)
+
+Siehe ROADMAP.md für vollständige Details aller Versionen.
+
 ---
 Letzte Aktualisierung: 2025-12-27
-Version: v1.5.0 (Feature-Complete, Testing ausstehend)
+Version: v1.5.0 (Released)
+Nächste Versionen: v1.6.0 → v1.7.0 → v1.8.0 → v2.0.0

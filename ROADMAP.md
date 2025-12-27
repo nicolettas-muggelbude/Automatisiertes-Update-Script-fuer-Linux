@@ -171,16 +171,231 @@ WARNUNG: Erstelle ein Backup vor dem Upgrade!
 
 ---
 
-## Version 1.6.0 - Weitere Verbesserungen
+## Version 1.6.0 - Benachrichtigungen & Hooks
 
-### Geplante Features
+### 🔔 Desktop-Benachrichtigungen (Priority)
 
-- **Pre-Update Hooks**: Custom Scripts vor Update ausführen
-- **Post-Update Hooks**: Custom Scripts nach Update ausführen
-- **Backup-Integration**: Optional Snapshots vor Updates
-- **Update-Schedule**: Intelligente Update-Zeitpunkte
+**Motivation:**
+Aktuell unterstützt das Script nur E-Mail-Benachrichtigungen. Desktop-User würden von visuellen Popup-Benachrichtigungen profitieren, besonders bei manueller Ausführung oder verfügbaren Upgrades.
+
+#### 1. Desktop-Notification Framework
+
+**Funktion:**
+```bash
+send_notification() {
+    local title="$1"
+    local message="$2"
+    local urgency="$3"  # low, normal, critical
+    local icon="$4"     # success, error, warning, info
+
+    # Prüfen ob Desktop-Benachrichtigungen aktiviert
+    if [ "$ENABLE_DESKTOP_NOTIFICATION" != "true" ]; then
+        return 0
+    fi
+
+    # notify-send verfügbar?
+    if ! command -v notify-send &> /dev/null; then
+        log_warning "notify-send nicht verfügbar"
+        return 1
+    fi
+
+    # Notification für SUDO_USER anzeigen
+    if [ -n "$SUDO_USER" ]; then
+        sudo -u "$SUDO_USER" DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u "$SUDO_USER")/bus \
+            notify-send --urgency="$urgency" --icon="$icon" "$title" "$message"
+    fi
+}
+```
+
+#### 2. Notification-Szenarien
+
+**Nach erfolgreichem Update:**
+```bash
+send_notification \
+    "System-Update abgeschlossen" \
+    "Alle Updates wurden erfolgreich installiert" \
+    "normal" \
+    "software-update-available"
+```
+
+**Bei verfügbarem Upgrade:**
+```bash
+send_notification \
+    "Distribution-Upgrade verfügbar" \
+    "Ubuntu 22.04 → Ubuntu 24.04\nMit 'sudo ./update.sh --upgrade' installieren" \
+    "normal" \
+    "system-software-update"
+```
+
+**Bei Fehlern:**
+```bash
+send_notification \
+    "Update fehlgeschlagen" \
+    "Prüfe Logdatei: $LOG_FILE" \
+    "critical" \
+    "dialog-error"
+```
+
+**Neustart erforderlich:**
+```bash
+send_notification \
+    "Neustart erforderlich" \
+    "System benötigt Neustart nach Updates" \
+    "normal" \
+    "system-reboot"
+```
+
+#### 3. Konfiguration
+
+**config.conf:**
+```bash
+# Desktop-Benachrichtigungen aktivieren (true/false)
+ENABLE_DESKTOP_NOTIFICATION=true
+
+# Notification-Dauer in Millisekunden (0 = Standard)
+NOTIFICATION_TIMEOUT=5000
+
+# Nur kritische Notifications anzeigen (true/false)
+NOTIFICATION_CRITICAL_ONLY=false
+```
+
+#### 4. Technische Details
+
+**Voraussetzungen:**
+- `notify-send` (Teil von libnotify)
+- X11 oder Wayland Desktop-Umgebung
+- DBUS läuft
+
+**Installation:**
+```bash
+# Debian/Ubuntu
+sudo apt-get install libnotify-bin
+
+# Fedora/RHEL
+sudo dnf install libnotify
+
+# Arch
+sudo pacman -S libnotify
+
+# openSUSE
+sudo zypper install libnotify-tools
+```
+
+**Unterstützte Desktop-Umgebungen:**
+- GNOME
+- KDE Plasma
+- XFCE
+- Cinnamon
+- MATE
+- LXQt
+- Budgie
+
+**Herausforderungen:**
+- Script läuft als root, Notification soll für User angezeigt werden
+- DISPLAY und DBUS_SESSION_BUS_ADDRESS müssen korrekt gesetzt sein
+- Funktioniert nicht auf Headless-Servern (Fallback zu E-Mail)
+
+#### 5. Mehrsprachigkeit
+
+**Neue Sprachmeldungen (de.lang / en.lang):**
+```bash
+NOTIFICATION_UPDATE_SUCCESS="System-Update abgeschlossen"
+NOTIFICATION_UPDATE_FAILED="Update fehlgeschlagen"
+NOTIFICATION_UPGRADE_AVAILABLE="Distribution-Upgrade verfügbar"
+NOTIFICATION_REBOOT_REQUIRED="Neustart erforderlich"
+```
+
+---
+
+## Version 1.7.0 - Hooks & Automation
+
+### 🪝 Pre/Post-Update Hooks
+
+**Motivation:**
+User möchten eigene Scripts vor und nach Updates ausführen können (z.B. Services stoppen, Backups erstellen, Monitoring pausieren).
+
+#### 1. Hook-System
+
+**Funktionen:**
+- `run_pre_update_hooks()` - Führt Scripts vor Update aus
+- `run_post_update_hooks()` - Führt Scripts nach Update aus
+- Hook-Verzeichnisse: `/etc/update-hooks/pre.d/` und `/etc/update-hooks/post.d/`
+
+**Features:**
+- Scripts in alphabetischer Reihenfolge ausführen
+- Exit-Code-Handling (bei Fehler abbrechen?)
+- Timeout für Hooks
+- Logging aller Hook-Ausführungen
+
+#### 2. Konfiguration
+
+```bash
+# Hooks aktivieren (true/false)
+ENABLE_HOOKS=true
+
+# Hook-Verzeichnis
+HOOKS_DIR="/etc/update-hooks"
+
+# Bei Hook-Fehler abbrechen (true/false)
+HOOKS_ABORT_ON_ERROR=false
+
+# Hook-Timeout in Sekunden
+HOOKS_TIMEOUT=300
+```
+
+#### 3. Beispiel-Hooks
+
+**Pre-Update Hook (Service stoppen):**
+```bash
+#!/bin/bash
+# /etc/update-hooks/pre.d/10-stop-services.sh
+systemctl stop myapp.service
+```
+
+**Post-Update Hook (Service starten):**
+```bash
+#!/bin/bash
+# /etc/update-hooks/post.d/90-start-services.sh
+systemctl start myapp.service
+```
+
+---
+
+## Version 1.8.0 - Backup & Optimierung
+
+### 💾 Backup-Integration
+
+**Motivation:**
+Automatische Backups vor kritischen Updates erhöhen die Sicherheit.
+
+**Features:**
+- Snapshot-Support für LVM, Btrfs, ZFS
+- Rsync-basierte Backups
+- Backup vor Distribution-Upgrades
+- Konfigurierbare Backup-Ziele
+- Automatische Backup-Rotation
+
+**Konfiguration:**
+```bash
+# Backup vor Updates (true/false)
+ENABLE_BACKUP=true
+
+# Backup-Methode (lvm|btrfs|zfs|rsync)
+BACKUP_METHOD="btrfs"
+
+# Backup-Ziel
+BACKUP_TARGET="/backup/snapshots"
+
+# Backup-Rotation (Anzahl zu behaltender Backups)
+BACKUP_RETENTION=3
+```
+
+### ⚙️ Weitere Optimierungen
+
+- **Update-Schedule**: Intelligente Update-Zeitpunkte (Low-Load-Detection)
 - **Bandwidth-Limit**: Download-Geschwindigkeit begrenzen
 - **Delta-Updates**: Nur Unterschiede laden (wenn unterstützt)
+- **Progress-Anzeige**: Fortschrittsbalken für lange Updates
 
 ---
 
@@ -230,5 +445,13 @@ Features werden priorisiert nach:
 ---
 
 **Hinweis:** Diese Roadmap ist nicht final und kann sich ändern basierend auf Community-Feedback und Ressourcen.
+
+## Versions-Übersicht
+
+- **v1.5.0** ✅ - Upgrade-Check System & Kernel-Schutz (Released 2025-12-27)
+- **v1.6.0** 🔄 - Desktop-Benachrichtigungen
+- **v1.7.0** 📋 - Hooks & Automation (Pre/Post-Update Hooks)
+- **v1.8.0** 📋 - Backup-Integration & Optimierungen
+- **v2.0.0** 📋 - Container-Support & Multi-System Management
 
 Letzte Aktualisierung: 2025-12-27
