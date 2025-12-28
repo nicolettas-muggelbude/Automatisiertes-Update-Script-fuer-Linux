@@ -539,8 +539,14 @@ sudo chown $USER:$USER /var/log/system-updates
 
 3. Script-Pfad absolut angeben:
    ```bash
+   # Beispiel für Installation im Home-Verzeichnis:
+   0 3 * * * /home/USERNAME/linux-update-script/update.sh
+
+   # Beispiel für Installation in /opt:
    0 3 * * * /opt/linux-update-script/update.sh
    ```
+
+   **Hinweis:** Ersetze `USERNAME` mit deinem tatsächlichen Benutzernamen oder verwende den absoluten Pfad zu deiner Installation.
 
 ## Kernel-Schutz
 
@@ -601,6 +607,13 @@ crontab -e
 
 ### Dateien entfernen
 
+**Für Installation im Home-Verzeichnis:**
+```bash
+rm -rf ~/linux-update-script
+sudo rm -rf /var/log/system-updates
+```
+
+**Für Installation in /opt:**
 ```bash
 sudo rm -rf /opt/linux-update-script
 sudo rm -rf /var/log/system-updates
