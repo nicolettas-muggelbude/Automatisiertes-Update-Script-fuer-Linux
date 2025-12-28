@@ -176,15 +176,16 @@ Update-Script/
 
 ## Roadmap - Geplante Versionen
 
-### v1.6.0 - Weitere Desktop-Notification-Verbesserungen
+### v1.6.0 - XDG-Konformität & Config-Migration
 **Status:** 📋 Geplant
 
 **Fokus:**
-- ⚠️ Hinweis: Basis-Desktop-Notifications bereits in v1.5.1 implementiert
-- Erweiterte Notification-Szenarien
-- Notification-Sound-Support (optional)
-- Custom Icons für verschiedene Distros
-- Notification-Historie/Log
+- **XDG Base Directory Specification** (Priority)
+  - Config-Migration nach `~/.config/linux-update-script/`
+  - Automatische Migration von alter Config
+  - Backwards-kompatibel (keine Breaking Changes)
+  - Community-Feedback: @tbreswald
+- Erweiterte Desktop-Notifications (optionale Erweiterungen)
 
 ### v1.7.0 - Hooks & Automation
 **Status:** 📋 Konzeptphase

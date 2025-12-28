@@ -254,33 +254,167 @@ sudo apt-get install dma
 
 ---
 
-## Version 1.6.0 - Erweiterte Desktop-Notifications
+## Version 1.6.0 - XDG-Konformität & Config-Migration
 
-### 🔔 Weitere Desktop-Notification-Verbesserungen
+### 📁 XDG Base Directory Specification (Priority)
 
 **Status:** 📋 Geplant
 
+**Motivation:**
+Community-Feedback (@tbreswald): Config-Dateien sollten Linux-Standard-konform in `~/.config/` liegen, nicht im Script-Ordner.
+
+**Ziele:**
+- ✅ XDG-konform: Config nach `~/.config/linux-update-script/`
+- ✅ Automatische Migration von alter Config
+- ✅ Backwards-kompatibel (keine Breaking Changes)
+- ✅ Config bleibt bei Script-Updates erhalten
+
+#### 1. Neue Config-Location
+
+**Aktuell (v1.5.1):**
+```bash
+~/linux-update-script/config.conf          # Im Script-Ordner
+```
+
+**Neu (v1.6.0):**
+```bash
+~/.config/linux-update-script/config.conf  # XDG-konform
+```
+
+**System-weite Installation:**
+```bash
+/etc/linux-update-script/config.conf       # System-Config
+~/.config/linux-update-script/config.conf  # User-Override (optional)
+```
+
+#### 2. Automatische Migration
+
+**Migrations-Logik beim Script-Start:**
+
+```bash
+migrate_config() {
+    local old_config="${SCRIPT_DIR}/config.conf"
+    local new_config="${HOME}/.config/linux-update-script/config.conf"
+    local new_dir="${HOME}/.config/linux-update-script"
+
+    # Neue Location bereits vorhanden? → nutzen
+    if [ -f "$new_config" ]; then
+        return 0
+    fi
+
+    # Alte Config vorhanden? → migrieren
+    if [ -f "$old_config" ]; then
+        log_info "Migriere Config nach ~/.config/ (XDG-Standard)"
+
+        # Verzeichnis erstellen
+        mkdir -p "$new_dir"
+
+        # Config kopieren
+        cp "$old_config" "$new_config"
+
+        # Alte Config umbenennen (als Backup)
+        mv "$old_config" "${old_config}.migrated"
+
+        log_info "Config erfolgreich migriert nach: $new_config"
+        log_info "Alte Config gesichert als: ${old_config}.migrated"
+        return 0
+    fi
+
+    # Keine Config vorhanden → install.sh verwenden
+    log_warning "Keine Config gefunden. Bitte install.sh ausführen."
+    return 1
+}
+```
+
+**Migrations-Ablauf:**
+1. Script prüft zuerst: `~/.config/linux-update-script/config.conf`
+2. Falls nicht vorhanden: Prüfe `./config.conf` (alter Pfad)
+3. Falls alte Config vorhanden:
+   - Erstelle `~/.config/linux-update-script/`
+   - Kopiere Config in neuen Pfad
+   - Benenne alte Config um zu `.migrated` (Backup)
+   - Info-Meldung ausgeben
+4. Nutze Config von neuer Location
+
+#### 3. install.sh Anpassungen
+
+**Neue Installations-Location:**
+```bash
+# install.sh erstellt Config direkt in ~/.config/
+CONFIG_DIR="${HOME}/.config/linux-update-script"
+CONFIG_FILE="${CONFIG_DIR}/config.conf"
+
+mkdir -p "$CONFIG_DIR"
+# ... Config erstellen in $CONFIG_FILE
+```
+
+**Alte Installation erkennen:**
+```bash
+# Falls alte Config existiert, anbieten zu migrieren
+if [ -f "${SCRIPT_DIR}/config.conf" ]; then
+    print_info "Alte Config-Datei gefunden"
+    print_info "Migration nach ~/.config/ empfohlen"
+    # ... Migration durchführen
+fi
+```
+
+#### 4. Vorteile
+
+**Für User:**
+- ✅ Config bleibt beim Script-Update (git pull) erhalten
+- ✅ Alle Configs an einem Standard-Ort (`~/.config/`)
+- ✅ Keine manuellen Schritte nötig (Auto-Migration)
+- ✅ Alte Config als Backup erhalten
+
+**Für Entwicklung:**
+- ✅ Standard-konform (XDG Base Directory Specification)
+- ✅ Saubere Trennung: Code vs. Konfiguration
+- ✅ Multi-User-fähig (jeder User eigene Config)
+- ✅ Vorbereitung für v2.0.0 (weitere XDG-Konformität)
+
+#### 5. Backwards-Kompatibilität
+
+**Fallback-Mechanismus:**
+```bash
+# Suche Config in dieser Reihenfolge:
+1. ~/.config/linux-update-script/config.conf  (neu, bevorzugt)
+2. /etc/linux-update-script/config.conf       (system-weit)
+3. ./config.conf                               (alt, deprecated)
+```
+
+**Warnung bei alter Location:**
+```bash
+if [ -f "./config.conf" ] && [ ! -f "~/.config/linux-update-script/config.conf" ]; then
+    log_warning "Config im alten Pfad gefunden"
+    log_warning "Migration wird beim nächsten Start durchgeführt"
+fi
+```
+
+#### 6. Dokumentation
+
+**README.md Update:**
+- Neue Config-Location dokumentieren
+- Migration automatisch erklärt
+- Manuelle Migration optional zeigen
+
+**CHANGELOG.md:**
+- Breaking Change: Nein (Auto-Migration)
+- Feature: XDG-Konformität
+- Migration: Automatisch beim ersten Start
+
+---
+
+### 🔔 Weitere Desktop-Notification-Verbesserungen
+
+**Status:** 📋 Geplant (niedrigere Priorität)
+
 **Hinweis:** Basis-Desktop-Notifications bereits in v1.5.1 implementiert.
 
-**Geplante Erweiterungen:**
-- [ ] Notification-Sound-Support (optional)
-- [ ] Custom Icons für verschiedene Distributionen
+**Optionale Erweiterungen:**
+- [ ] Notification-Sound-Support
+- [ ] Custom Icons für Distributionen
 - [ ] Notification-Historie/Log
-- [ ] Gruppierung von Notifications (bei mehreren gleichzeitigen Updates)
-- [ ] Click-Action für Notifications (z.B. Log öffnen)
-- [ ] Nur kritische Notifications anzeigen (NOTIFICATION_CRITICAL_ONLY)
-
-**Konfiguration (geplant):**
-```bash
-# Notification-Sound aktivieren
-NOTIFICATION_SOUND=false
-
-# Nur kritische Notifications
-NOTIFICATION_CRITICAL_ONLY=false
-
-# Custom Icon-Theme
-NOTIFICATION_ICON_THEME="default"
-```
+- [ ] Click-Action für Notifications
 
 ---
 
@@ -574,7 +708,7 @@ Features werden priorisiert nach:
 
 - **v1.5.0** ✅ - Upgrade-Check System & Kernel-Schutz (Released: 2025-12-27)
 - **v1.5.1** ✅ - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
-- **v1.6.0** 📋 - Erweiterte Desktop-Notifications (geplant)
+- **v1.6.0** 📋 - **XDG-Konformität & Config-Migration** (Auto-Migration nach ~/.config/)
 - **v1.7.0** 📋 - Hooks & Automation (Pre/Post-Update Hooks)
 - **v1.8.0** 📋 - Backup-Integration & Optimierungen
 - **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
