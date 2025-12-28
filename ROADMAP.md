@@ -171,100 +171,48 @@ WARNUNG: Erstelle ein Backup vor dem Upgrade!
 
 ---
 
-## Version 1.6.0 - Benachrichtigungen & Hooks
+## Version 1.5.1 - Desktop-Benachrichtigungen & DMA
 
-### 🔔 Desktop-Benachrichtigungen (Priority)
+### ✅ Bereits implementiert
+
+#### Desktop-Benachrichtigungen
+**Status:** ✅ Implementiert (Released: 2025-12-27)
 
 **Motivation:**
-Aktuell unterstützt das Script nur E-Mail-Benachrichtigungen. Desktop-User würden von visuellen Popup-Benachrichtigungen profitieren, besonders bei manueller Ausführung oder verfügbaren Upgrades.
+Desktop-User profitieren von visuellen Popup-Benachrichtigungen, besonders bei manueller Ausführung oder verfügbaren Upgrades.
 
-#### 1. Desktop-Notification Framework
+**Implementierte Features:**
+- ✅ Zentrale `send_notification()` Funktion
+- ✅ Automatische SUDO_USER-Erkennung für root-Kontext
+- ✅ DISPLAY=:0 und DBUS_SESSION_BUS_ADDRESS Setup
+- ✅ Graceful Degradation ohne libnotify
+- ✅ Unterstützung für alle Desktop-Umgebungen (GNOME, KDE, XFCE, Cinnamon, MATE, LXQt, Budgie)
 
-**Funktion:**
+**Konfiguration (config.conf):**
 ```bash
-send_notification() {
-    local title="$1"
-    local message="$2"
-    local urgency="$3"  # low, normal, critical
-    local icon="$4"     # success, error, warning, info
-
-    # Prüfen ob Desktop-Benachrichtigungen aktiviert
-    if [ "$ENABLE_DESKTOP_NOTIFICATION" != "true" ]; then
-        return 0
-    fi
-
-    # notify-send verfügbar?
-    if ! command -v notify-send &> /dev/null; then
-        log_warning "notify-send nicht verfügbar"
-        return 1
-    fi
-
-    # Notification für SUDO_USER anzeigen
-    if [ -n "$SUDO_USER" ]; then
-        sudo -u "$SUDO_USER" DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u "$SUDO_USER")/bus \
-            notify-send --urgency="$urgency" --icon="$icon" "$title" "$message"
-    fi
-}
-```
-
-#### 2. Notification-Szenarien
-
-**Nach erfolgreichem Update:**
-```bash
-send_notification \
-    "System-Update abgeschlossen" \
-    "Alle Updates wurden erfolgreich installiert" \
-    "normal" \
-    "software-update-available"
-```
-
-**Bei verfügbarem Upgrade:**
-```bash
-send_notification \
-    "Distribution-Upgrade verfügbar" \
-    "Ubuntu 22.04 → Ubuntu 24.04\nMit 'sudo ./update.sh --upgrade' installieren" \
-    "normal" \
-    "system-software-update"
-```
-
-**Bei Fehlern:**
-```bash
-send_notification \
-    "Update fehlgeschlagen" \
-    "Prüfe Logdatei: $LOG_FILE" \
-    "critical" \
-    "dialog-error"
-```
-
-**Neustart erforderlich:**
-```bash
-send_notification \
-    "Neustart erforderlich" \
-    "System benötigt Neustart nach Updates" \
-    "normal" \
-    "system-reboot"
-```
-
-#### 3. Konfiguration
-
-**config.conf:**
-```bash
-# Desktop-Benachrichtigungen aktivieren (true/false)
 ENABLE_DESKTOP_NOTIFICATION=true
-
-# Notification-Dauer in Millisekunden (0 = Standard)
 NOTIFICATION_TIMEOUT=5000
-
-# Nur kritische Notifications anzeigen (true/false)
-NOTIFICATION_CRITICAL_ONLY=false
 ```
 
-#### 4. Technische Details
+**Implementierte Notification-Szenarien:**
 
-**Voraussetzungen:**
-- `notify-send` (Teil von libnotify)
-- X11 oder Wayland Desktop-Umgebung
-- DBUS läuft
+- ✅ Nach erfolgreichem Update
+- ✅ Bei verfügbarem Upgrade
+- ✅ Bei Fehlern (critical urgency)
+- ✅ Neustart erforderlich
+
+**Icons:**
+- `software-update-available` (Update-Erfolg)
+- `system-software-update` (Upgrade verfügbar)
+- `dialog-error` (Fehler)
+- `system-reboot` (Neustart)
+
+**Mehrsprachigkeit:**
+- ✅ 8 neue Sprachmeldungen in Deutsch und Englisch
+- ✅ NOTIFICATION_UPDATE_SUCCESS / NOTIFICATION_UPDATE_SUCCESS_BODY
+- ✅ NOTIFICATION_UPDATE_FAILED / NOTIFICATION_UPDATE_FAILED_BODY
+- ✅ NOTIFICATION_UPGRADE_AVAILABLE / NOTIFICATION_UPGRADE_AVAILABLE_BODY
+- ✅ NOTIFICATION_REBOOT_REQUIRED / NOTIFICATION_REBOOT_REQUIRED_BODY
 
 **Installation:**
 ```bash
@@ -276,33 +224,62 @@ sudo dnf install libnotify
 
 # Arch
 sudo pacman -S libnotify
-
-# openSUSE
-sudo zypper install libnotify-tools
 ```
 
-**Unterstützte Desktop-Umgebungen:**
-- GNOME
-- KDE Plasma
-- XFCE
-- Cinnamon
-- MATE
-- LXQt
-- Budgie
+---
 
-**Herausforderungen:**
-- Script läuft als root, Notification soll für User angezeigt werden
-- DISPLAY und DBUS_SESSION_BUS_ADDRESS müssen korrekt gesetzt sein
-- Funktioniert nicht auf Headless-Servern (Fallback zu E-Mail)
+#### DMA - Empfohlene MTA-Lösung
+**Status:** ✅ Dokumentiert (Released: 2025-12-27)
 
-#### 5. Mehrsprachigkeit
+**Community-Feedback:**
+Ein User empfahl DMA (DragonFly Mail Agent) als einfachere Alternative zu postfix/ssmtp für lokale E-Mail-Benachrichtigungen.
 
-**Neue Sprachmeldungen (de.lang / en.lang):**
+**Warum DMA?**
+- ✅ Keine Konfiguration nötig - einfach installieren und es funktioniert
+- ✅ Kein laufender Dienst im Hintergrund
+- ✅ Kein offener Port (25)
+- ✅ Keine Queue
+- ✅ Perfekt für lokale Mails (cron, mail)
+
+**Installation:**
 ```bash
-NOTIFICATION_UPDATE_SUCCESS="System-Update abgeschlossen"
-NOTIFICATION_UPDATE_FAILED="Update fehlgeschlagen"
-NOTIFICATION_UPGRADE_AVAILABLE="Distribution-Upgrade verfügbar"
-NOTIFICATION_REBOOT_REQUIRED="Neustart erforderlich"
+sudo apt-get install dma
+# Das war's - DMA funktioniert sofort!
+```
+
+**Dokumentation:**
+- ✅ DMA als empfohlene Lösung in README.md
+- ✅ Alternative MTAs weiterhin dokumentiert (ssmtp, postfix)
+- ✅ Einfachere Installationsanleitung
+
+---
+
+## Version 1.6.0 - Erweiterte Desktop-Notifications
+
+### 🔔 Weitere Desktop-Notification-Verbesserungen
+
+**Status:** 📋 Geplant
+
+**Hinweis:** Basis-Desktop-Notifications bereits in v1.5.1 implementiert.
+
+**Geplante Erweiterungen:**
+- [ ] Notification-Sound-Support (optional)
+- [ ] Custom Icons für verschiedene Distributionen
+- [ ] Notification-Historie/Log
+- [ ] Gruppierung von Notifications (bei mehreren gleichzeitigen Updates)
+- [ ] Click-Action für Notifications (z.B. Log öffnen)
+- [ ] Nur kritische Notifications anzeigen (NOTIFICATION_CRITICAL_ONLY)
+
+**Konfiguration (geplant):**
+```bash
+# Notification-Sound aktivieren
+NOTIFICATION_SOUND=false
+
+# Nur kritische Notifications
+NOTIFICATION_CRITICAL_ONLY=false
+
+# Custom Icon-Theme
+NOTIFICATION_ICON_THEME="default"
 ```
 
 ---
@@ -595,8 +572,9 @@ Features werden priorisiert nach:
 
 ## Versions-Übersicht
 
-- **v1.5.0** ✅ - Upgrade-Check System & Kernel-Schutz (Released 2025-12-27)
-- **v1.6.0** 🔄 - Desktop-Benachrichtigungen
+- **v1.5.0** ✅ - Upgrade-Check System & Kernel-Schutz (Released: 2025-12-27)
+- **v1.5.1** ✅ - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
+- **v1.6.0** 📋 - Erweiterte Desktop-Notifications (geplant)
 - **v1.7.0** 📋 - Hooks & Automation (Pre/Post-Update Hooks)
 - **v1.8.0** 📋 - Backup-Integration & Optimierungen
 - **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
