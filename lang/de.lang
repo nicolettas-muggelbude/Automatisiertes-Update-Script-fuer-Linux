@@ -108,6 +108,16 @@ MSG_UPGRADE_DISABLED="Upgrade-Check deaktiviert (ENABLE_UPGRADE_CHECK=false)"
 EMAIL_SUBJECT_UPGRADE="Distribution-Upgrade verfügbar"
 EMAIL_BODY_UPGRADE="Ein Upgrade für die Distribution ist verfügbar"
 
+# Desktop-Benachrichtigungen
+NOTIFICATION_UPDATE_SUCCESS="System-Update abgeschlossen"
+NOTIFICATION_UPDATE_SUCCESS_BODY="Alle Updates wurden erfolgreich installiert"
+NOTIFICATION_UPDATE_FAILED="Update fehlgeschlagen"
+NOTIFICATION_UPDATE_FAILED_BODY="Prüfe Logdatei für Details"
+NOTIFICATION_UPGRADE_AVAILABLE="Distribution-Upgrade verfügbar"
+NOTIFICATION_UPGRADE_AVAILABLE_BODY="Neue Version verfügbar. Mit --upgrade installieren"
+NOTIFICATION_REBOOT_REQUIRED="Neustart erforderlich"
+NOTIFICATION_REBOOT_REQUIRED_BODY="System benötigt Neustart nach Updates"
+
 # Sprachinfo
 LANGUAGE_NAME="Deutsch"
 LANGUAGE_CODE="de"

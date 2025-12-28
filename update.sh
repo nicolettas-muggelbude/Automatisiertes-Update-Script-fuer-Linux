@@ -28,6 +28,8 @@ MIN_KERNELS=3
 ENABLE_UPGRADE_CHECK=true
 AUTO_UPGRADE=false
 UPGRADE_NOTIFY_EMAIL=true
+ENABLE_DESKTOP_NOTIFICATION=true
+NOTIFICATION_TIMEOUT=5000
 
 # Konfiguration laden, falls vorhanden
 if [ -f "$CONFIG_FILE" ]; then
@@ -153,6 +155,50 @@ send_email() {
             log_warning "$MSG_EMAIL_NO_PROGRAM"
             log_warning "$MSG_EMAIL_INSTALL_CLIENT"
         fi
+    fi
+}
+
+# Desktop-Benachrichtigung senden
+send_notification() {
+    local title="$1"
+    local message="$2"
+    local urgency="${3:-normal}"  # low, normal, critical
+    local icon="${4:-dialog-information}"
+
+    # Prüfen ob Desktop-Benachrichtigungen aktiviert
+    if [ "$ENABLE_DESKTOP_NOTIFICATION" != "true" ]; then
+        return 0
+    fi
+
+    # notify-send verfügbar?
+    if ! command -v notify-send &> /dev/null; then
+        return 0  # Kein Fehler, nur nicht verfügbar
+    fi
+
+    # Notification-Timeout
+    local timeout="${NOTIFICATION_TIMEOUT:-5000}"
+
+    # Wenn als root ausgeführt, Notification für SUDO_USER anzeigen
+    if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+        local user_id
+        user_id=$(id -u "$SUDO_USER")
+
+        # DISPLAY und DBUS_SESSION_BUS_ADDRESS für User setzen
+        sudo -u "$SUDO_USER" \
+            DISPLAY=:0 \
+            DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_id}/bus" \
+            notify-send \
+                --urgency="$urgency" \
+                --icon="$icon" \
+                --expire-time="$timeout" \
+                "$title" "$message" 2>/dev/null || true
+    else
+        # Direkt aufrufen wenn nicht als root
+        notify-send \
+            --urgency="$urgency" \
+            --icon="$icon" \
+            --expire-time="$timeout" \
+            "$title" "$message" 2>/dev/null || true
     fi
 }
 
@@ -594,11 +640,21 @@ check_reboot_required() {
         if [ -f /var/run/reboot-required ]; then
             log_warning "$MSG_REBOOT_AUTO"
             send_email "$EMAIL_SUBJECT_REBOOT" "$MSG_REBOOT_NOTIFICATION"
+            send_notification \
+                "$NOTIFICATION_REBOOT_REQUIRED" \
+                "$NOTIFICATION_REBOOT_REQUIRED_BODY" \
+                "critical" \
+                "system-reboot"
             shutdown -r +1 "System wird in 1 Minute neu gestartet (Update)"
         fi
     else
         if [ -f /var/run/reboot-required ]; then
             log_warning "$MSG_REBOOT_MANUAL"
+            send_notification \
+                "$NOTIFICATION_REBOOT_REQUIRED" \
+                "$NOTIFICATION_REBOOT_REQUIRED_BODY" \
+                "normal" \
+                "system-reboot"
         fi
     fi
 }
@@ -691,6 +747,13 @@ esac
 if [ "$UPDATE_SUCCESS" = true ]; then
     log_info "$MSG_HEADER_SUCCESS"
 
+    # Desktop-Benachrichtigung: Update erfolgreich
+    send_notification \
+        "$NOTIFICATION_UPDATE_SUCCESS" \
+        "$NOTIFICATION_UPDATE_SUCCESS_BODY" \
+        "normal" \
+        "software-update-available"
+
     # Neustart prüfen
     check_reboot_required
 
@@ -705,6 +768,13 @@ if [ "$UPDATE_SUCCESS" = true ]; then
     elif [ "$UPGRADE_CHECK_RESULT" -eq 3 ]; then
         # shellcheck disable=SC2059
         printf "$MSG_UPGRADE_INFO\n" "$0" | tee -a "$LOG_FILE"
+
+        # Desktop-Benachrichtigung: Upgrade verfügbar
+        send_notification \
+            "$NOTIFICATION_UPGRADE_AVAILABLE" \
+            "$NOTIFICATION_UPGRADE_AVAILABLE_BODY" \
+            "normal" \
+            "system-software-update"
     fi
 
     # E-Mail senden
@@ -720,6 +790,13 @@ $MSG_LOGFILE: $LOG_FILE"
     exit 0
 else
     log_error "$MSG_HEADER_FAILED"
+
+    # Desktop-Benachrichtigung: Update fehlgeschlagen
+    send_notification \
+        "$NOTIFICATION_UPDATE_FAILED" \
+        "$NOTIFICATION_UPDATE_FAILED_BODY: $LOG_FILE" \
+        "critical" \
+        "dialog-error"
 
     EMAIL_BODY="$EMAIL_BODY_FAILED
 

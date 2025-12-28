@@ -40,3 +40,10 @@ AUTO_UPGRADE=false
 # Upgrade-Benachrichtigungen per E-Mail (true/false)
 # Sendet E-Mail wenn Distribution-Upgrade verfügbar ist
 UPGRADE_NOTIFY_EMAIL=true
+
+# Desktop-Benachrichtigungen aktivieren (true/false)
+# Zeigt Popup-Benachrichtigungen für wichtige Events
+ENABLE_DESKTOP_NOTIFICATION=true
+
+# Notification-Dauer in Millisekunden (0 = Standard des Systems)
+NOTIFICATION_TIMEOUT=5000

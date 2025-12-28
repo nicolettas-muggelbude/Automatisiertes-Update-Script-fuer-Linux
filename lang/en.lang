@@ -108,6 +108,16 @@ MSG_UPGRADE_DISABLED="Upgrade check disabled (ENABLE_UPGRADE_CHECK=false)"
 EMAIL_SUBJECT_UPGRADE="Distribution Upgrade Available"
 EMAIL_BODY_UPGRADE="An upgrade for the distribution is available"
 
+# Desktop Notifications
+NOTIFICATION_UPDATE_SUCCESS="System Update Completed"
+NOTIFICATION_UPDATE_SUCCESS_BODY="All updates have been successfully installed"
+NOTIFICATION_UPDATE_FAILED="Update Failed"
+NOTIFICATION_UPDATE_FAILED_BODY="Check log file for details"
+NOTIFICATION_UPGRADE_AVAILABLE="Distribution Upgrade Available"
+NOTIFICATION_UPGRADE_AVAILABLE_BODY="New version available. Install with --upgrade"
+NOTIFICATION_REBOOT_REQUIRED="Reboot Required"
+NOTIFICATION_REBOOT_REQUIRED_BODY="System requires reboot after updates"
+
 # Language Info
 LANGUAGE_NAME="English"
 LANGUAGE_CODE="en"

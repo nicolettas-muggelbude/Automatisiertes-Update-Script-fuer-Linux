@@ -20,12 +20,13 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 ## Features
 
 - ✅ **Mehrsprachigkeit**: Deutsch und Englisch (weitere Sprachen via Community)
+- ✅ **Desktop-Benachrichtigungen**: Popup-Notifications für Updates, Upgrades, Fehler (v1.5.1)
 - ✅ **Upgrade-Check System**: Automatische Erkennung verfügbarer Distribution-Upgrades (v1.5.0)
 - ✅ **Kernel-Schutz**: Verhindert versehentliches Entfernen von Fallback-Kerneln (v1.5.0)
 - ✅ Automatische Distribution-Erkennung
 - ✅ Vollautomatische System-Updates
 - ✅ Detailliertes Logging mit Zeitstempel
-- ✅ Optionale E-Mail-Benachrichtigung
+- ✅ Optionale E-Mail-Benachrichtigung (DMA empfohlen)
 - ✅ Interaktives Installations-Script
 - ✅ Cron-Job-Unterstützung für automatische Updates
 - ✅ Optionaler automatischer Neustart
@@ -246,6 +247,12 @@ AUTO_UPGRADE=false
 
 # Upgrade-Benachrichtigungen per E-Mail (true/false)
 UPGRADE_NOTIFY_EMAIL=true
+
+# Desktop-Benachrichtigungen aktivieren (true/false)
+ENABLE_DESKTOP_NOTIFICATION=true
+
+# Notification-Dauer in Millisekunden
+NOTIFICATION_TIMEOUT=5000
 ```
 
 ### Konfiguration ändern
@@ -267,19 +274,42 @@ nano config.conf
 Für E-Mail-Benachrichtigungen benötigst du:
 
 1. **Mail-Client** (mail oder mailx)
-2. **MTA (Mail Transfer Agent)** wie postfix, ssmtp oder sendmail
+2. **MTA (Mail Transfer Agent)**
+
+### Empfohlene MTA-Lösung: DMA (DragonFly Mail Agent)
+
+**DMA** ist die **einfachste und beste Lösung** für lokale E-Mail-Benachrichtigungen:
+
+✅ **Vorteile:**
+- Keine Konfiguration nötig
+- Kein laufender Dienst
+- Kein offener Port (25)
+- Keine Queue im Hintergrund
+- Perfekt für lokale Mails (cron, mail)
+- Funktioniert sofort nach Installation
 
 **Debian/Ubuntu/Mint:**
 ```bash
-# Mail-Client installieren
-sudo apt-get install mailutils
+# DMA installieren (EMPFOHLEN)
+sudo apt-get install dma
 
-# Einfacher MTA (ssmtp für Gmail, etc.)
+# Das war's! DMA funktioniert sofort für lokale Mails
+```
+
+### Alternative MTAs
+
+Falls DMA nicht verfügbar oder spezielle Anforderungen bestehen:
+
+**ssmtp (einfach, für externe SMTP-Server):**
+```bash
 sudo apt-get install ssmtp
-# Dann /etc/ssmtp/ssmtp.conf konfigurieren
+# Konfiguration in /etc/ssmtp/ssmtp.conf erforderlich
+```
 
-# ODER vollwertiger MTA
+**postfix (vollwertiger MTA):**
+```bash
 sudo apt-get install postfix
+# Während Installation: "Internet Site" wählen
 ```
 
 **RHEL/Fedora/CentOS:**
@@ -322,6 +352,58 @@ echo "Test-Nachricht" | mail -s "Test" deine-admin@domain.de
 ```
 [WARNUNG] E-Mail konnte nicht gesendet werden (MTA nicht konfiguriert?)
 ```
+
+## Desktop-Benachrichtigungen
+
+**NEU in v1.5.1:** Das Script zeigt Popup-Benachrichtigungen für wichtige Events!
+
+### Funktionen
+
+Desktop-Benachrichtigungen werden angezeigt bei:
+- ✅ **Update erfolgreich**: Grüner Hinweis nach abgeschlossenem Update
+- ✅ **Upgrade verfügbar**: Info über neue Distribution-Version
+- ✅ **Update fehlgeschlagen**: Kritische Warnung bei Fehler
+- ✅ **Neustart erforderlich**: Hinweis wenn Reboot nötig
+
+### Voraussetzungen
+
+```bash
+# Debian/Ubuntu/Mint
+sudo apt-get install libnotify-bin
+
+# Fedora/RHEL
+sudo dnf install libnotify
+
+# Arch Linux
+sudo pacman -S libnotify
+
+# openSUSE
+sudo zypper install libnotify-tools
+```
+
+### Unterstützte Desktop-Umgebungen
+
+- GNOME
+- KDE Plasma
+- XFCE
+- Cinnamon
+- MATE
+- LXQt
+- Budgie
+
+### Konfiguration
+
+```bash
+# In config.conf
+
+# Desktop-Benachrichtigungen aktivieren
+ENABLE_DESKTOP_NOTIFICATION=true
+
+# Notification-Dauer (Millisekunden)
+NOTIFICATION_TIMEOUT=5000
+```
+
+**Hinweis:** Funktioniert automatisch auch wenn Script als `sudo` ausgeführt wird - Notifications werden für den eigentlichen User angezeigt.
 
 ## Logging
 
@@ -539,20 +621,19 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.5.0 (2025-12-27) - Sicherheit & Upgrade-Check
+### Aktuelle Version: 1.5.1 (2025-12-27) - Desktop-Benachrichtigungen & DMA
 
 **Highlights:**
-- ✅ **NEU: Upgrade-Check System** - Automatische Erkennung verfügbarer Distribution-Upgrades
-  - Unterstützung für Debian/Ubuntu, Fedora, Arch/Manjaro, Solus
-  - `--upgrade` Flag für manuelle Upgrades
-  - Optionale E-Mail-Benachrichtigung bei verfügbaren Upgrades
-  - Backup-Warnung und Benutzer-Bestätigung
-- ✅ **NEU: Kernel-Schutz** - Verhindert versehentliches Entfernen von Fallback-Kerneln
-  - Intelligente Zählung stabiler Kernel-Versionen
-  - Konfigurierbare Mindestanzahl (Standard: 3 Kernel)
-  - Unterstützung für Debian/Ubuntu und RHEL/Fedora
-- ✅ Erweiterte Konfigurationsoptionen
-- ✅ Verbesserte Mehrsprachigkeit (alle neuen Features in DE/EN)
+- ✅ **NEU: Desktop-Benachrichtigungen** - Popup-Notifications für wichtige Events
+  - Benachrichtigungen bei Update-Erfolg, Upgrade verfügbar, Fehler, Neustart
+  - Funktioniert automatisch auch als root
+  - Unterstützt GNOME, KDE, XFCE, Cinnamon, MATE, LXQt, Budgie
+- ✅ **NEU: DMA-Empfehlung** - Einfachste Lösung für E-Mail-Benachrichtigungen
+  - Keine Konfiguration nötig
+  - Kein laufender Dienst, kein offener Port
+  - Perfekt für lokale Mails
+- ✅ Upgrade-Check System (v1.5.0)
+- ✅ Kernel-Schutz (v1.5.0)
 - ✅ ShellCheck-konform (keine Warnungen)
 
 **Version 1.4.0:**

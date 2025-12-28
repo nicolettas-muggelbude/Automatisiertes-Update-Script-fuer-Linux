@@ -7,6 +7,45 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.5.1] - 2025-12-27
+
+### Hinzugefügt
+- **Desktop-Benachrichtigungen**: Popup-Notifications für wichtige Events
+  - `send_notification()` - Funktion für Desktop-Benachrichtigungen mit notify-send
+  - Benachrichtigung bei erfolgreichem Update
+  - Benachrichtigung bei verfügbarem Distribution-Upgrade
+  - Benachrichtigung bei Update-Fehler (kritisch)
+  - Benachrichtigung bei erforderlichem Neustart
+  - Funktioniert automatisch auch als root (zeigt Notification für SUDO_USER)
+  - Unterstützt alle gängigen Desktop-Umgebungen (GNOME, KDE, XFCE, etc.)
+- **Konfigurationsoptionen** (config.conf):
+  - `ENABLE_DESKTOP_NOTIFICATION` - Desktop-Benachrichtigungen aktivieren/deaktivieren (default: true)
+  - `NOTIFICATION_TIMEOUT` - Notification-Dauer in Millisekunden (default: 5000)
+- **Mehrsprachigkeit**: 8 neue Sprachmeldungen für Desktop-Notifications
+  - Alle Messages in Deutsch (de.lang) und Englisch (en.lang)
+  - NOTIFICATION_UPDATE_SUCCESS / NOTIFICATION_UPDATE_SUCCESS_BODY
+  - NOTIFICATION_UPDATE_FAILED / NOTIFICATION_UPDATE_FAILED_BODY
+  - NOTIFICATION_UPGRADE_AVAILABLE / NOTIFICATION_UPGRADE_AVAILABLE_BODY
+  - NOTIFICATION_REBOOT_REQUIRED / NOTIFICATION_REBOOT_REQUIRED_BODY
+
+### Geändert
+- **README.md**: Neue Sektion "Desktop-Benachrichtigungen" mit vollständiger Dokumentation
+- **README.md**: E-Mail-Konfiguration - DMA (DragonFly Mail Agent) als empfohlene Lösung
+  - DMA als einfachste und beste Option für lokale E-Mails dokumentiert
+  - Keine Konfiguration nötig, kein laufender Dienst, kein offener Port
+  - Alternativen (ssmtp, postfix) weiterhin dokumentiert
+
+### Technische Details
+- Desktop-Notifications verwenden notify-send (libnotify)
+- DISPLAY und DBUS_SESSION_BUS_ADDRESS werden automatisch für SUDO_USER gesetzt
+- Graceful Degradation: Kein Fehler wenn notify-send nicht verfügbar
+- Icons: software-update-available, system-software-update, dialog-error, system-reboot
+- Urgency-Level: normal für Updates/Upgrades, critical für Fehler/Auto-Reboot
+
+### Community
+- DMA-Empfehlung basierend auf User-Feedback (@Community)
+- Einfachere MTA-Lösung für typische Use-Cases
+
 ## [1.5.0] - 2025-12-27
 
 ### Hinzugefügt
@@ -273,6 +312,7 @@ Das Projekt verwendet [Semantic Versioning](https://semver.org/lang/de/):
 - **MINOR** (x.1.x): Neue Funktionen (abwärtskompatibel)
 - **PATCH** (x.x.1): Bugfixes (abwärtskompatibel)
 
+[1.5.1]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/compare/v1.2.0...v1.3.0
