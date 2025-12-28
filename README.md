@@ -32,6 +32,64 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 - ✅ Optionaler automatischer Neustart
 - ✅ Einfache Konfiguration über Config-Datei
 
+## ⚠️ Wichtige Hinweise VOR der Installation
+
+### Scripts IMMER im Terminal ausführen
+
+**❌ NICHT im Dateimanager doppelklicken!**
+
+Die Scripts müssen im **Terminal** ausgeführt werden, nicht durch Doppelklick im GUI-Dateimanager (Nautilus, Dolphin, Thunar, etc.).
+
+**✅ Korrekt - Terminal verwenden:**
+
+```bash
+# Terminal öffnen (Strg+Alt+T oder über Anwendungsmenü)
+# Dann ins Script-Verzeichnis wechseln:
+cd ~/linux-update-script
+./install.sh
+```
+
+**❌ Falsch:**
+- Doppelklick auf `install.sh` im Dateimanager
+- Script aus falschem Verzeichnis ausführen
+- Alte/falsche Script-Versionen verwenden
+
+### Richtige Verzeichnisstruktur
+
+Nach der Installation sollte die Struktur so aussehen:
+
+```
+~/linux-update-script/          ← Hier müssen die Scripts sein!
+├── update.sh                   ← Haupt-Update-Script
+├── install.sh                  ← Installations-Script
+├── log-viewer.sh               ← Log-Viewer
+├── config.conf.example         ← Konfigurations-Vorlage
+├── config.conf                 ← Deine Konfiguration (nach Installation)
+└── lang/                       ← Sprachdateien
+```
+
+**⚠️ Alte Versionen aufräumen:**
+
+Falls du bereits frühere Versionen oder Test-Downloads hast:
+
+```bash
+# Prüfe was in deinem Verzeichnis liegt:
+ls -la
+
+# Lösche ALTE Versionen (z.B.):
+# - system-update.sh        ← Alter Name, NICHT verwenden!
+# - README_mitMail.md       ← Alte Doku, NICHT verwenden!
+```
+
+**Nur diese Scriptnamen sind offiziell:**
+- ✅ `update.sh`
+- ✅ `install.sh`
+- ✅ `log-viewer.sh`
+
+Falls du Dateien mit anderen Namen siehst (z.B. `system-update.sh`), sind das **alte/inoffizielle Versionen**!
+
+---
+
 ## Installation
 
 ### 1. Repository klonen oder Dateien herunterladen
@@ -99,7 +157,29 @@ cat config.conf
 
 ### Manuelles Update ausführen
 
+**⚠️ Wichtig: Zuerst ins richtige Verzeichnis wechseln!**
+
 ```bash
+# Terminal öffnen (Strg+Alt+T)
+
+# Ins Script-Verzeichnis wechseln:
+cd ~/linux-update-script
+
+# ODER bei /opt Installation:
+cd /opt/linux-update-script
+
+# Jetzt das Update-Script ausführen:
+sudo ./update.sh
+```
+
+**Häufiger Fehler:**
+```bash
+# ❌ FALSCH - ohne cd ins richtige Verzeichnis:
+sudo ./update.sh
+# Fehler: ./update.sh: Datei oder Verzeichnis nicht gefunden
+
+# ✅ RICHTIG - erst mit cd ins Verzeichnis:
+cd ~/linux-update-script
 sudo ./update.sh
 ```
 
@@ -107,6 +187,7 @@ Das Script führt automatisch folgende Schritte durch:
 1. System-Updates installieren
 2. Prüfung auf verfügbare Distribution-Upgrades
 3. Optional: E-Mail-Benachrichtigung versenden
+4. Optional: Desktop-Benachrichtigung anzeigen
 
 ### Distribution-Upgrade durchführen
 
@@ -129,6 +210,10 @@ sudo ./update.sh
 Um ein verfügbares Distribution-Upgrade durchzuführen:
 
 ```bash
+# Ins Script-Verzeichnis wechseln:
+cd ~/linux-update-script
+
+# Upgrade durchführen:
 sudo ./update.sh --upgrade
 ```
 
@@ -151,6 +236,10 @@ Möchtest du das Upgrade durchführen? [j/N]: j
 ### Hilfe anzeigen
 
 ```bash
+# Ins Script-Verzeichnis wechseln:
+cd ~/linux-update-script
+
+# Hilfe anzeigen:
 sudo ./update.sh --help
 ```
 
@@ -418,6 +507,10 @@ Alle Updates werden in Logdateien mit Zeitstempel gespeichert:
 **Interaktiver Log Viewer (empfohlen):**
 
 ```bash
+# Ins Script-Verzeichnis wechseln:
+cd ~/linux-update-script
+
+# Log-Viewer starten:
 ./log-viewer.sh
 ```
 
