@@ -4,10 +4,14 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.4.0 - ShellCheck-Warnungen behoben, Kernel-Schutz implementiert
+v1.5.1 - Desktop-Benachrichtigungen & DMA
+
+## Vorherige Versionen
+- v1.5.0 - Upgrade-Check System (Released: 2025-12-27)
+- v1.4.0 - ShellCheck-Warnungen behoben, Kernel-Schutz implementiert
 
 ## Nächste Version
-v1.5.0 - Upgrade-Check System (in Arbeit)
+v1.6.0 - Weitere Desktop-Notification-Verbesserungen (geplant)
 
 ## Projekt-Struktur
 ```
@@ -60,16 +64,16 @@ Update-Script/
 - ShellCheck für statische Code-Analyse
 - GitHub Actions für automatisierte Checks
 
-## Aktuelle Entwicklung (v1.5.0)
+## Implementierte Features (v1.5.0)
 
 ### Upgrade-Check System
-**Status:** In Implementierung
+**Status:** ✅ Implementiert (Released: 2025-12-27)
 
-**Ziele:**
-1. Erkennung verfügbarer Distribution-Upgrades
-2. Automatische Benachrichtigung an User
-3. Optionales automatisches Upgrade
-4. Unterstützung für Solus (Priorität), Arch, Debian/Ubuntu, Fedora
+**Features:**
+1. ✅ Erkennung verfügbarer Distribution-Upgrades
+2. ✅ Automatische Benachrichtigung an User
+3. ✅ Optionales automatisches Upgrade
+4. ✅ Unterstützung für Solus, Arch, Debian/Ubuntu, Fedora
 
 **Technische Umsetzung:**
 - `check_upgrade_available()` - Framework-Funktion
@@ -78,18 +82,35 @@ Update-Script/
 - `check_upgrade_debian()` - Debian/Ubuntu Release-Check
 - `check_upgrade_fedora()` - Fedora Version-Check
 - Command-Line Parameter: `--upgrade`
-- Config-Parameter: `ENABLE_UPGRADE_CHECK`, `AUTO_UPGRADE`
+- Config-Parameter: `ENABLE_UPGRADE_CHECK`, `AUTO_UPGRADE`, `UPGRADE_NOTIFY_EMAIL`
 
-**Neue Sprachmeldungen benötigt:**
-- MSG_UPGRADE_AVAILABLE
-- MSG_UPGRADE_NO_UPGRADE
-- MSG_UPGRADE_START
-- MSG_UPGRADE_SUCCESS
-- MSG_UPGRADE_FAILED
-- MSG_UPGRADE_BACKUP_WARNING
-- MSG_UPGRADE_CONFIRM
-- EMAIL_SUBJECT_UPGRADE
-- EMAIL_BODY_UPGRADE
+## Implementierte Features (v1.5.1)
+
+### Desktop-Benachrichtigungen
+**Status:** ✅ Implementiert (Released: 2025-12-27)
+
+**Features:**
+1. ✅ Desktop-Notifications mit notify-send
+2. ✅ Notifications bei Erfolg, Upgrade verfügbar, Fehler, Neustart
+3. ✅ Automatische root-to-user Notification (SUDO_USER Handling)
+4. ✅ Unterstützung für alle Desktop-Umgebungen
+
+**Technische Umsetzung:**
+- `send_notification()` - Zentrale Notification-Funktion
+- Automatisches DISPLAY=:0 und DBUS_SESSION_BUS_ADDRESS Setup
+- Graceful Degradation wenn notify-send nicht verfügbar
+- Config-Parameter: `ENABLE_DESKTOP_NOTIFICATION`, `NOTIFICATION_TIMEOUT`
+- Icons: software-update-available, system-software-update, dialog-error, system-reboot
+
+### DMA - Empfohlene MTA-Lösung
+**Status:** ✅ Dokumentiert (Released: 2025-12-27)
+
+**Community-Feedback implementiert:**
+- DMA (DragonFly Mail Agent) als empfohlene Lösung für E-Mail-Benachrichtigungen
+- Keine Konfiguration nötig
+- Kein laufender Dienst, kein offener Port, keine Queue
+- Perfekt für lokale Mails (cron, mail)
+- Alternative Lösungen (ssmtp, postfix) weiterhin dokumentiert
 
 ## Wichtige Hinweise
 
@@ -109,20 +130,28 @@ Update-Script/
 - Priorisierung nach Community-Nachfrage
 - Open-Source (MIT License)
 
-## Nächste Schritte (aktuelle Session)
+## Aktueller Status
 
-1. ✅ claude.md erstellen
-2. ✅ Upgrade-Check für Solus implementieren
-3. ✅ Framework für andere Distributionen
-4. ✅ Command-Line Parameter --upgrade
-5. ✅ Config-Erweiterung
-6. ✅ Sprachdateien erweitern
-7. ✅ E-Mail-Benachrichtigungen
-8. ✅ Testing & Dokumentation (ROADMAP aktualisiert)
+### v1.5.1 (Released: 2025-12-27)
+✅ **Vollständig implementiert und veröffentlicht**
 
-## Implementierungsdetails v1.5.0
+**Änderungen:**
+- 6 Dateien geändert
+- +244 / -19 Zeilen
+- 1 neue Funktion (`send_notification()`)
+- 2 neue Konfigurationsparameter
+- 8 neue Sprachmeldungen (DE/EN)
+- ShellCheck: 0 Warnungen
 
-### Neue Funktionen
+**Release:**
+- Git Tag: v1.5.1
+- GitHub Release: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/releases/tag/v1.5.1
+- Release Notes: RELEASE_NOTES_v1.5.1.md
+
+### v1.5.0 (Released: 2025-12-27)
+✅ **Upgrade-Check System vollständig implementiert**
+
+**Neue Funktionen:**
 - `check_upgrade_available()` - Hauptfunktion für Upgrade-Check
 - `check_upgrade_solus()` - Solus-spezifischer Check
 - `check_upgrade_arch()` - Arch-spezifischer Check
@@ -130,53 +159,32 @@ Update-Script/
 - `check_upgrade_fedora()` - Fedora Version-Check
 - `perform_upgrade()` - Upgrade-Durchführung mit Bestätigung
 
-### Command-Line Interface
+**Command-Line Interface:**
 - `--upgrade` - Führt Distribution-Upgrade durch
 - `--help` / `-h` - Zeigt Hilfe an
 
-### Konfiguration
+**Konfiguration:**
 - `ENABLE_UPGRADE_CHECK` (default: true)
 - `AUTO_UPGRADE` (default: false)
 - `UPGRADE_NOTIFY_EMAIL` (default: true)
 
-### Workflow
-1. Normales Update läuft
-2. Nach erfolgreichem Update: Upgrade-Check
-3. Wenn Upgrade verfügbar (Return-Code 3): Benachrichtigung
-4. Optional: AUTO_UPGRADE führt Upgrade direkt durch
-5. E-Mail-Benachrichtigung bei verfügbarem Upgrade
-
-### Rückgabewerte
+**Rückgabewerte:**
 - `0` - Kein Upgrade verfügbar
 - `1` - Fehler oder nicht unterstützt
 - `2` - Updates verfügbar (Rolling Release)
 - `3` - Major-Upgrade verfügbar
 
-### ShellCheck
-✅ Alle Checks bestanden - keine Warnungen
-
-### Status
-🎉 **Upgrade-Check System vollständig implementiert und bereit für v1.5.0**
-
-Noch zu tun:
-- Testing auf echten Systemen
-- README.md aktualisieren
-- CHANGELOG.md vorbereiten
-- Release Notes
-
 ## Roadmap - Geplante Versionen
 
-### v1.6.0 - Desktop-Benachrichtigungen
-**Status:** 🔄 Geplant
+### v1.6.0 - Weitere Desktop-Notification-Verbesserungen
+**Status:** 📋 Geplant
 
 **Fokus:**
-- Desktop-Benachrichtigungen mit notify-send
-- 4 Notification-Szenarien (Erfolg, Upgrade, Fehler, Neustart)
-- Konfiguration: ENABLE_DESKTOP_NOTIFICATION, NOTIFICATION_TIMEOUT
-- Unterstützung für GNOME, KDE, XFCE, Cinnamon, MATE, etc.
-
-**Herausforderung:** Script läuft als root, Notification für User
-**Lösung:** `sudo -u $SUDO_USER DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=...`
+- ⚠️ Hinweis: Basis-Desktop-Notifications bereits in v1.5.1 implementiert
+- Erweiterte Notification-Szenarien
+- Notification-Sound-Support (optional)
+- Custom Icons für verschiedene Distros
+- Notification-Historie/Log
 
 ### v1.7.0 - Hooks & Automation
 **Status:** 📋 Konzeptphase
@@ -230,5 +238,10 @@ Siehe ROADMAP.md für vollständige Details aller Versionen.
 
 ---
 Letzte Aktualisierung: 2025-12-27
-Version: v1.5.0 (Released)
+Aktuelle Version: v1.5.1 (Released)
 Nächste Versionen: v1.6.0 → v1.7.0 → v1.8.0 → v2.0.0
+
+## Nächste Schritte
+- Warten auf Community-Feedback zu v1.5.0 und v1.5.1
+- Bug-Reports und Feature-Requests bearbeiten
+- Testing auf verschiedenen Distributionen
