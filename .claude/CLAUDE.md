@@ -4,7 +4,7 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.6.0 - XDG-Konformität & Config-Migration (in Entwicklung)
+v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot
 
 ## Vorherige Versionen
 - v1.5.1 - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
@@ -113,6 +113,99 @@ Update-Script/
 - Perfekt für lokale Mails (cron, mail)
 - Alternative Lösungen (ssmtp, postfix) weiterhin dokumentiert
 
+## Implementierte Features (v1.6.0)
+
+### XDG-Konformität & Config-Migration
+**Status:** ✅ Implementiert (2026-01-24)
+
+**Features:**
+1. ✅ Config-Migration nach `~/.config/linux-update-script/`
+2. ✅ Automatische Migration von alter Config
+3. ✅ Backwards-kompatibel (Fallback-Mechanismus)
+4. ✅ Community-Feedback implementiert (@tbreswald)
+
+**Technische Umsetzung:**
+- `migrate_config()` - Automatische Migration
+- `find_config_file()` - Fallback XDG → System → Old
+- XDG_CONFIG_HOME Support
+- Backup der alten Config als `.migrated`
+
+### NVIDIA-Kernel-Kompatibilitätsprüfung
+**Status:** ✅ Vollständig implementiert (2026-01-25)
+
+**Features:**
+1. ✅ NVIDIA-Treiber-Erkennung (nvidia-smi, lsmod, lspci)
+2. ✅ Pending-Kernel-Abfrage (alle 6 Distributionsfamilien)
+3. ✅ DKMS-Status-Prüfung
+4. ✅ Automatischer DKMS-Rebuild (optional)
+5. ✅ **Secure Boot Support** (MOK-Signierung)
+6. ✅ **Kernel-Hold-Mechanismus** (Sicherer Default)
+7. ✅ **Power-User-Modus** (Opt-in, risikoreich)
+
+**Secure Boot Features:**
+- `is_secureboot_enabled()` - 3 Detection-Methoden (mokutil, bootctl, EFI vars)
+- `check_mok_keys()` - MOK-Schlüssel-Prüfung
+- `sign_nvidia_modules()` - Automatische Modul-Signierung
+- `handle_secureboot_signing()` - Post-Build Secure Boot Handling
+- Config: `NVIDIA_AUTO_MOK_SIGN` (default: false)
+
+**Kernel-Hold Features:**
+- Test DKMS-Build **VOR** Update
+- Bei Inkompatibilität: Kernel automatisch zurückhalten
+- Distribution-spezifische Hold-Befehle:
+  * Debian/Ubuntu: `apt-mark hold`
+  * RHEL/Fedora: `dnf versionlock`
+  * openSUSE: `zypper addlock`
+  * Arch: `pacman.conf IgnorePkg` (manuell)
+  * Solus/Void: linux-lts empfohlen
+- Rest des Systems wird normal aktualisiert
+- Info wie Kernel später freigegeben werden kann
+
+**Power-User-Modus:**
+- Config: `NVIDIA_ALLOW_UNSUPPORTED_KERNEL=true`
+- Erlaubt Updates trotz nicht unterstützter Kernel
+- Explizite Risiko-Warnungen
+- DKMS-Rebuild wird trotzdem versucht
+- Für erfahrene Benutzer mit Fallback-Optionen
+
+**Technische Umsetzung:**
+- `is_nvidia_installed()` - NVIDIA-Treiber-Erkennung
+- `get_pending_kernel_version()` - Pending Kernel (6 Distributionen)
+- `check_nvidia_dkms_status()` - DKMS-Status
+- `test_dkms_build()` - Pre-Build-Test
+- `hold_kernel_update()` - Kernel zurückhalten
+- `check_nvidia_compatibility()` - Hauptfunktion mit Safe/Power-User Modi
+
+**Konfiguration:**
+- `NVIDIA_CHECK_DISABLED` (default: false)
+- `NVIDIA_AUTO_DKMS_REBUILD` (default: false)
+- `NVIDIA_ALLOW_UNSUPPORTED_KERNEL` (default: false) - **NEU!**
+- `NVIDIA_AUTO_MOK_SIGN` (default: false) - **NEU!**
+
+**Sprachdateien:**
+- +25 Nachrichten in lang/de.lang (Secure Boot, MOK, Kernel-Hold)
+- +25 Nachrichten in lang/en.lang (Secure Boot, MOK, Kernel-Hold)
+- Gesamt: 41 neue Sprachmeldungen für NVIDIA-Features
+
+### Desktop-Benachrichtigungen in install.sh
+**Status:** ✅ Implementiert (2026-01-24)
+
+**Features:**
+1. ✅ Interaktive Frage nach Desktop-Benachrichtigungen
+2. ✅ Automatische libnotify-Erkennung
+3. ✅ Installation-Angebot für alle 6 Distributionsfamilien
+4. ✅ Config-Generation mit ENABLE_DESKTOP_NOTIFICATION
+
+**Technische Umsetzung:**
+- libnotify-Detection in install.sh
+- Distribution-spezifische Installation:
+  * Debian/Ubuntu: `libnotify-bin`
+  * RHEL/Fedora: `libnotify`
+  * Arch: `libnotify`
+  * openSUSE: `libnotify-tools`
+  * Solus: `libnotify`
+  * Void: `libnotify`
+
 ## Wichtige Hinweise
 
 ### Sicherheit
@@ -132,6 +225,31 @@ Update-Script/
 - Open-Source (MIT License)
 
 ## Aktueller Status
+
+### v1.6.0 (In Entwicklung: 2026-01-25)
+✅ **Alle Features implementiert - bereit für Testing**
+
+**Änderungen:**
+- 6 Dateien geändert
+- +588 / -54 Zeilen
+- 10 neue Funktionen (Secure Boot, Kernel-Hold, DKMS-Test)
+- 4 neue Konfigurationsparameter
+- 50 neue Sprachmeldungen (DE/EN)
+- ShellCheck: 0 Warnungen
+
+**Commits:**
+- 9c92c40: XDG-Konformität & Config-Migration
+- e07c8f6: Git-Installation-Dokumentation
+- 2b83db3: Desktop-Notifications in install.sh
+- 6ba412b: NVIDIA-Kernel-Kompatibilitätsprüfung
+- be982f4: NVIDIA-Prüfung für alle 6 Distributionen
+- 74dd97c: NVIDIA Secure Boot & Kernel-Hold-Mechanismus
+
+**Nächste Schritte:**
+- Testing auf verschiedenen Distributionen
+- Community-Feedback sammeln
+- Release Notes erstellen
+- GitHub Release v1.6.0
 
 ### v1.5.1 (Released: 2025-12-27)
 ✅ **Vollständig implementiert und veröffentlicht**
