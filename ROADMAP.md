@@ -273,7 +273,13 @@ Proprietäre NVIDIA-Treiber erfordern nach Kernel-Updates oft ein DKMS-Rebuild. 
    - Erkennung der installierten Treiberversion
 
 2. ✅ Abfrage der pending Kernel-Version
-   - Distributionsspezifische Abfrage (Debian, RHEL, Arch)
+   - Distributionsspezifische Abfrage für ALLE unterstützten Distributionen:
+     * Debian/Ubuntu/Mint (apt-cache)
+     * RHEL/Fedora/CentOS/Rocky/AlmaLinux (dnf/yum)
+     * Arch/Manjaro/EndeavourOS/Garuda/ArcoLinux (pacman)
+     * openSUSE/SLES (zypper)
+     * Solus (eopkg)
+     * Void Linux (xbps-query)
    - Erkennung welcher Kernel im Update verfügbar ist
 
 3. ✅ DKMS-Status-Prüfung

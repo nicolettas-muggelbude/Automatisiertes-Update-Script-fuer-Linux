@@ -943,10 +943,13 @@ sudo pacman -S dkms
 
 ### Unterstützte Distributionen
 
-Die NVIDIA-Prüfung funktioniert auf:
-- ✅ Debian/Ubuntu/Mint
-- ✅ RHEL/Fedora/CentOS/Rocky/AlmaLinux
-- ✅ Arch Linux/Manjaro/EndeavourOS
+Die NVIDIA-Prüfung funktioniert auf **allen unterstützten Distributionen**:
+- ✅ Debian/Ubuntu/Mint (apt-cache)
+- ✅ RHEL/Fedora/CentOS/Rocky/AlmaLinux (dnf/yum)
+- ✅ Arch Linux/Manjaro/EndeavourOS/Garuda/ArcoLinux (pacman)
+- ✅ openSUSE/SLES (zypper)
+- ✅ Solus (eopkg)
+- ✅ Void Linux (xbps-query)
 
 ### Manueller DKMS-Rebuild
 

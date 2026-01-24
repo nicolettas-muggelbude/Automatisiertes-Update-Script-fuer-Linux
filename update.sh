@@ -367,6 +367,27 @@ get_pending_kernel_version() {
                     grep "^Version" | awk '{print $3}' | head -1)
             fi
             ;;
+        opensuse*|sles)
+            # Prüfe verfügbare Kernel-Pakete
+            if command -v zypper &> /dev/null; then
+                pending_kernel=$(zypper info kernel-default 2>/dev/null | \
+                    grep "^Version" | awk '{print $3}' | head -1)
+            fi
+            ;;
+        solus)
+            # Prüfe verfügbare Kernel-Pakete
+            if command -v eopkg &> /dev/null; then
+                pending_kernel=$(eopkg info linux-current 2>/dev/null | \
+                    grep "^Version" | awk '{print $3}' | head -1)
+            fi
+            ;;
+        void)
+            # Prüfe verfügbare Kernel-Pakete
+            if command -v xbps-query &> /dev/null; then
+                pending_kernel=$(xbps-query -R -p pkgver linux 2>/dev/null | \
+                    sed 's/linux-//' | head -1)
+            fi
+            ;;
     esac
 
     echo "$pending_kernel"
