@@ -45,6 +45,19 @@ INSTALL_EMAIL_DISABLED="Email notifications disabled"
 INSTALL_REBOOT_ENABLE="Enable automatic reboot (if required)?"
 INSTALL_REBOOT_WARNING="System will be automatically rebooted when updates require it!"
 
+# Desktop Notifications
+INSTALL_DESKTOP_ENABLE="Enable desktop notifications?"
+INSTALL_DESKTOP_INFO="Shows popup notifications for updates, upgrades and errors"
+INSTALL_DESKTOP_NO_NOTIFY="libnotify (notify-send) not found"
+INSTALL_DESKTOP_REQUIREMENTS="For desktop notifications you need libnotify"
+INSTALL_DESKTOP_INSTALLATION="Installation:"
+INSTALL_DESKTOP_INSTALL_NOW="Do you want to install libnotify now?"
+INSTALL_DESKTOP_INSTALL_SUCCESS="libnotify successfully installed"
+INSTALL_DESKTOP_INSTALL_FAILED="Installation failed - you can install libnotify manually later"
+INSTALL_DESKTOP_CONTINUE="Enable desktop notifications anyway?"
+INSTALL_DESKTOP_ENABLED="Desktop notifications enabled"
+INSTALL_DESKTOP_DISABLED="Desktop notifications disabled"
+
 # Log Directory
 INSTALL_LOG_DEFAULT="Default log directory"
 INSTALL_LOG_CHANGE="Do you want to change the log directory?"

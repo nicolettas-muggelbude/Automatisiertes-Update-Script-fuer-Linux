@@ -172,6 +172,8 @@ create_config() {
     local email_recipient=""
     local log_dir="/var/log/system-updates"
     local auto_reboot="false"
+    local enable_desktop_notification="true"
+    local notification_timeout="5000"
 
     # Bestehende Konfiguration laden
     if load_existing_config; then
@@ -179,6 +181,8 @@ create_config() {
         email_recipient="${EMAIL_RECIPIENT:-}"
         log_dir="${LOG_DIR:-/var/log/system-updates}"
         auto_reboot="${AUTO_REBOOT:-false}"
+        enable_desktop_notification="${ENABLE_DESKTOP_NOTIFICATION:-true}"
+        notification_timeout="${NOTIFICATION_TIMEOUT:-5000}"
         echo
     fi
 
@@ -241,6 +245,113 @@ create_config() {
         auto_reboot="false"
     fi
 
+    # Desktop-Benachrichtigungen
+    echo
+    echo "$INSTALL_DESKTOP_INFO"
+    if ask_yes_no "$INSTALL_DESKTOP_ENABLE" "y"; then
+        # Prüfen ob notify-send installiert ist
+        if ! command -v notify-send &> /dev/null; then
+            echo
+            print_warning "$INSTALL_DESKTOP_NO_NOTIFY"
+            echo
+            echo "$INSTALL_DESKTOP_REQUIREMENTS"
+            echo
+            echo "$INSTALL_DESKTOP_INSTALLATION"
+
+            # Distribution erkennen und Installation anbieten
+            if [ -f /etc/os-release ]; then
+                # shellcheck source=/dev/null
+                . /etc/os-release
+                case "$ID" in
+                    debian|ubuntu|linuxmint|pop)
+                        echo "  sudo apt-get install libnotify-bin"
+                        echo
+                        if ask_yes_no "$INSTALL_DESKTOP_INSTALL_NOW" "y"; then
+                            if sudo apt-get install -y libnotify-bin 2>/dev/null; then
+                                print_info "$INSTALL_DESKTOP_INSTALL_SUCCESS"
+                            else
+                                print_error "$INSTALL_DESKTOP_INSTALL_FAILED"
+                            fi
+                        fi
+                        ;;
+                    fedora|rhel|centos|rocky|almalinux)
+                        echo "  sudo dnf install libnotify"
+                        echo
+                        if ask_yes_no "$INSTALL_DESKTOP_INSTALL_NOW" "y"; then
+                            if sudo dnf install -y libnotify 2>/dev/null; then
+                                print_info "$INSTALL_DESKTOP_INSTALL_SUCCESS"
+                            else
+                                print_error "$INSTALL_DESKTOP_INSTALL_FAILED"
+                            fi
+                        fi
+                        ;;
+                    arch|manjaro|endeavouros|garuda|arcolinux)
+                        echo "  sudo pacman -S libnotify"
+                        echo
+                        if ask_yes_no "$INSTALL_DESKTOP_INSTALL_NOW" "y"; then
+                            if sudo pacman -S --noconfirm libnotify 2>/dev/null; then
+                                print_info "$INSTALL_DESKTOP_INSTALL_SUCCESS"
+                            else
+                                print_error "$INSTALL_DESKTOP_INSTALL_FAILED"
+                            fi
+                        fi
+                        ;;
+                    opensuse*|sles)
+                        echo "  sudo zypper install libnotify-tools"
+                        echo
+                        if ask_yes_no "$INSTALL_DESKTOP_INSTALL_NOW" "y"; then
+                            if sudo zypper install -y libnotify-tools 2>/dev/null; then
+                                print_info "$INSTALL_DESKTOP_INSTALL_SUCCESS"
+                            else
+                                print_error "$INSTALL_DESKTOP_INSTALL_FAILED"
+                            fi
+                        fi
+                        ;;
+                    solus)
+                        echo "  sudo eopkg install libnotify"
+                        echo
+                        if ask_yes_no "$INSTALL_DESKTOP_INSTALL_NOW" "y"; then
+                            if sudo eopkg install -y libnotify 2>/dev/null; then
+                                print_info "$INSTALL_DESKTOP_INSTALL_SUCCESS"
+                            else
+                                print_error "$INSTALL_DESKTOP_INSTALL_FAILED"
+                            fi
+                        fi
+                        ;;
+                    void)
+                        echo "  sudo xbps-install -S libnotify"
+                        echo
+                        if ask_yes_no "$INSTALL_DESKTOP_INSTALL_NOW" "y"; then
+                            if sudo xbps-install -y libnotify 2>/dev/null; then
+                                print_info "$INSTALL_DESKTOP_INSTALL_SUCCESS"
+                            else
+                                print_error "$INSTALL_DESKTOP_INSTALL_FAILED"
+                            fi
+                        fi
+                        ;;
+                    *)
+                        echo "  Siehe Dokumentation deiner Distribution"
+                        ;;
+                esac
+            fi
+
+            echo
+            if ask_yes_no "$INSTALL_DESKTOP_CONTINUE" "y"; then
+                enable_desktop_notification="true"
+                print_info "$INSTALL_DESKTOP_ENABLED"
+            else
+                enable_desktop_notification="false"
+                print_info "$INSTALL_DESKTOP_DISABLED"
+            fi
+        else
+            enable_desktop_notification="true"
+            print_info "$INSTALL_DESKTOP_ENABLED"
+        fi
+    else
+        enable_desktop_notification="false"
+        print_info "$INSTALL_DESKTOP_DISABLED"
+    fi
+
     # Log-Verzeichnis (optional, erweiterte Einstellung)
     echo
     print_info "Standard Log-Verzeichnis: $log_dir"
@@ -294,6 +405,30 @@ LOG_DIR="$log_dir"
 
 # Automatischer Neustart bei Bedarf (true/false)
 AUTO_REBOOT=$auto_reboot
+
+# Kernel-Schutz (true/false)
+# Verhindert autoremove wenn zu wenige Kernel installiert sind
+KERNEL_PROTECTION=true
+
+# Minimale Anzahl stabiler Kernel (Standard: 3)
+MIN_KERNELS=3
+
+# Upgrade-Check aktivieren (true/false)
+# Prüft nach regulären Updates, ob Distribution-Upgrades verfügbar sind
+ENABLE_UPGRADE_CHECK=true
+
+# Automatisches Upgrade durchführen (true/false)
+# WARNUNG: Kann Breaking Changes verursachen!
+AUTO_UPGRADE=false
+
+# Upgrade-Benachrichtigungen per E-Mail (true/false)
+UPGRADE_NOTIFY_EMAIL=true
+
+# Desktop-Benachrichtigungen aktivieren (true/false)
+ENABLE_DESKTOP_NOTIFICATION=$enable_desktop_notification
+
+# Notification-Dauer in Millisekunden
+NOTIFICATION_TIMEOUT=$notification_timeout
 EOF
 
     print_info "$INSTALL_CONFIG_SAVED: $CONFIG_FILE"
