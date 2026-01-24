@@ -37,7 +37,9 @@ UPGRADE_NOTIFY_EMAIL=true
 ENABLE_DESKTOP_NOTIFICATION=true
 NOTIFICATION_TIMEOUT=5000
 NVIDIA_CHECK_DISABLED=false
+NVIDIA_ALLOW_UNSUPPORTED_KERNEL=false
 NVIDIA_AUTO_DKMS_REBUILD=false
+NVIDIA_AUTO_MOK_SIGN=false
 
 # Config-Migration Funktion (wird nach load_language aufgerufen)
 migrate_config() {
@@ -422,6 +424,231 @@ check_nvidia_dkms_status() {
     return 0  # DKMS-Module vorhanden (generell)
 }
 
+# Prüft ob Secure Boot aktiv ist
+is_secureboot_enabled() {
+    # Methode 1: mokutil (am zuverlässigsten)
+    if command -v mokutil &> /dev/null; then
+        if mokutil --sb-state 2>/dev/null | grep -qi "SecureBoot enabled"; then
+            return 0
+        fi
+        if mokutil --sb-state 2>/dev/null | grep -qi "SecureBoot disabled"; then
+            return 1
+        fi
+    fi
+
+    # Methode 2: bootctl (systemd-boot)
+    if command -v bootctl &> /dev/null; then
+        if bootctl status 2>/dev/null | grep -qi "Secure Boot.*enabled"; then
+            return 0
+        fi
+    fi
+
+    # Methode 3: EFI-Variablen direkt lesen
+    for efi_var in /sys/firmware/efi/efivars/SecureBoot-*; do
+        if [ -f "$efi_var" ]; then
+            local sb_value
+            sb_value=$(od -An -t u1 "$efi_var" 2>/dev/null | awk '{print $NF}')
+            if [ "$sb_value" = "1" ]; then
+                return 0
+            fi
+        fi
+    done
+
+    # Konnte nicht ermittelt werden
+    return 2
+}
+
+# Prüft ob MOK-Schlüssel registriert sind
+check_mok_keys() {
+    if ! command -v mokutil &> /dev/null; then
+        return 1  # mokutil nicht installiert
+    fi
+
+    # Prüfe ob Keys enrollt sind
+    if mokutil --list-enrolled 2>/dev/null | grep -qi "BEGIN CERTIFICATE"; then
+        return 0  # MOK-Keys gefunden
+    fi
+
+    return 1  # Keine MOK-Keys
+}
+
+# Signiert NVIDIA DKMS-Module mit MOK
+sign_nvidia_modules() {
+    local kernel_version="$1"
+
+    # Prüfe ob sign-file verfügbar ist
+    local sign_tool=""
+    if [ -x /usr/src/linux-headers-"${kernel_version}"/scripts/sign-file ]; then
+        sign_tool="/usr/src/linux-headers-${kernel_version}/scripts/sign-file"
+    else
+        # Suche in kbuild-Verzeichnissen
+        sign_tool=$(find /usr/lib/linux-kbuild-*/scripts/sign-file 2>/dev/null | head -1)
+        if [ -z "$sign_tool" ] && command -v kmodsign &> /dev/null; then
+            sign_tool="kmodsign"
+        fi
+    fi
+
+    if [ -z "$sign_tool" ]; then
+        log_error "sign-file tool nicht gefunden"
+        return 1
+    fi
+
+    # Finde DKMS MOK-Schlüssel
+    local mok_key=""
+    local mok_cert=""
+
+    # Standard-Pfade prüfen
+    if [ -f /var/lib/shim-signed/mok/MOK.priv ]; then
+        mok_key="/var/lib/shim-signed/mok/MOK.priv"
+        mok_cert="/var/lib/shim-signed/mok/MOK.der"
+    elif [ -f /var/lib/dkms/mok.key ]; then
+        mok_key="/var/lib/dkms/mok.key"
+        mok_cert="/var/lib/dkms/mok.pub"
+    fi
+
+    if [ -z "$mok_key" ] || [ ! -f "$mok_key" ]; then
+        log_warning "$MSG_NVIDIA_MOK_MISSING"
+        log_warning "$MSG_NVIDIA_MOK_ENROLLMENT_NEEDED"
+        return 1
+    fi
+
+    log_info "$MSG_NVIDIA_MOK_SIGN_START"
+
+    # Finde alle NVIDIA Kernel-Module
+    local module_path="/lib/modules/${kernel_version}/updates/dkms"
+    if [ ! -d "$module_path" ]; then
+        module_path="/lib/modules/${kernel_version}/extra"
+    fi
+
+    local signed_count=0
+    local failed_count=0
+
+    if [ -d "$module_path" ]; then
+        while IFS= read -r -d '' module; do
+            if [[ "$module" == *nvidia*.ko ]]; then
+                if "$sign_tool" sha256 "$mok_key" "$mok_cert" "$module" 2>&1 | tee -a "$LOG_FILE"; then
+                    ((signed_count++))
+                else
+                    ((failed_count++))
+                    log_error "Fehler beim Signieren: $module"
+                fi
+            fi
+        done < <(find "$module_path" -name "*.ko" -print0 2>/dev/null)
+    fi
+
+    if [ "$failed_count" -gt 0 ]; then
+        log_error "$MSG_NVIDIA_MOK_SIGN_FAILED"
+        return 1
+    elif [ "$signed_count" -gt 0 ]; then
+        log_info "$MSG_NVIDIA_MOK_SIGN_SUCCESS ($signed_count Module)"
+        return 0
+    else
+        log_warning "Keine NVIDIA-Module zum Signieren gefunden"
+        return 1
+    fi
+}
+
+# Setzt Kernel-Hold (verhindert Update)
+hold_kernel_update() {
+    local distro="$1"
+    local unhold_cmd=""
+
+    case "$distro" in
+        debian|ubuntu|linuxmint|pop)
+            unhold_cmd="sudo apt-mark unhold linux-image-generic linux-headers-generic"
+
+            if apt-mark hold linux-image-generic linux-headers-generic 2>&1 | tee -a "$LOG_FILE"; then
+                # shellcheck disable=SC2059
+                log_info "$(printf "$MSG_NVIDIA_KERNEL_HOLD_SUCCESS" "linux-image-generic")"
+                log_info "$MSG_NVIDIA_KERNEL_HOLD_INFO"
+                # shellcheck disable=SC2059
+                log_info "$(printf "$MSG_NVIDIA_KERNEL_UNHOLD_LATER" "$unhold_cmd")"
+                return 0
+            fi
+            ;;
+        fedora|rhel|centos|rocky|almalinux)
+            if command -v dnf &> /dev/null; then
+                unhold_cmd="sudo dnf versionlock delete kernel kernel-core kernel-modules"
+
+                if dnf versionlock add kernel kernel-core kernel-modules 2>&1 | tee -a "$LOG_FILE"; then
+                    # shellcheck disable=SC2059
+                    log_info "$(printf "$MSG_NVIDIA_KERNEL_HOLD_SUCCESS" "kernel")"
+                    log_info "$MSG_NVIDIA_KERNEL_HOLD_INFO"
+                    # shellcheck disable=SC2059
+                    log_info "$(printf "$MSG_NVIDIA_KERNEL_UNHOLD_LATER" "$unhold_cmd")"
+                    return 0
+                fi
+            elif command -v yum &> /dev/null; then
+                log_warning "yum versionlock erfordert yum-plugin-versionlock"
+                log_info "Installiere mit: sudo yum install yum-plugin-versionlock"
+            fi
+            ;;
+        arch|manjaro|endeavouros|garuda|arcolinux)
+            log_warning "Arch Linux: Manuelle Konfiguration erforderlich"
+            log_info "Füge in /etc/pacman.conf hinzu:"
+            log_info "  IgnorePkg = linux linux-headers"
+            log_info "Oder installiere linux-lts statt linux"
+            return 1
+            ;;
+        opensuse*|sles)
+            unhold_cmd="sudo zypper removelock kernel-default"
+
+            if zypper addlock kernel-default 2>&1 | tee -a "$LOG_FILE"; then
+                # shellcheck disable=SC2059
+                log_info "$(printf "$MSG_NVIDIA_KERNEL_HOLD_SUCCESS" "kernel-default")"
+                log_info "$MSG_NVIDIA_KERNEL_HOLD_INFO"
+                # shellcheck disable=SC2059
+                log_info "$(printf "$MSG_NVIDIA_KERNEL_UNHOLD_LATER" "$unhold_cmd")"
+                return 0
+            fi
+            ;;
+        solus)
+            log_warning "Solus: Kernel-Hold nicht standardmäßig unterstützt"
+            log_info "Erwäge linux-lts Paket statt linux-current"
+            return 1
+            ;;
+        void)
+            log_warning "Void Linux: Kernel-Hold via xbps ignorepkg"
+            log_info "Füge in /etc/xbps.d/10-ignore.conf hinzu:"
+            log_info "  ignorepkg=linux"
+            return 1
+            ;;
+    esac
+
+    log_error "$MSG_NVIDIA_KERNEL_HOLD_FAILED"
+    return 1
+}
+
+# Test-Build für DKMS (ohne Installation)
+test_dkms_build() {
+    local kernel_version="$1"
+
+    if ! command -v dkms &> /dev/null; then
+        return 1
+    fi
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_NVIDIA_BUILD_TEST" "$kernel_version")"
+
+    # Ermittle NVIDIA DKMS-Modul
+    local nvidia_module
+    nvidia_module=$(dkms status 2>/dev/null | grep -i nvidia | head -1 | cut -d',' -f1 | tr -d ' ')
+
+    if [ -z "$nvidia_module" ]; then
+        log_warning "Kein NVIDIA DKMS-Modul gefunden für Build-Test"
+        return 1
+    fi
+
+    # Versuche Build (nur build, nicht install)
+    if dkms build -m "$nvidia_module" -k "$kernel_version" 2>&1 | tee -a "$LOG_FILE" | grep -qi "error\|fail"; then
+        log_error "$MSG_NVIDIA_BUILD_TEST_FAILED"
+        return 1
+    fi
+
+    log_info "$MSG_NVIDIA_BUILD_TEST_SUCCESS"
+    return 0
+}
+
 # Hauptfunktion: NVIDIA-Kompatibilitätsprüfung vor Update
 check_nvidia_compatibility() {
     # Prüfung deaktiviert?
@@ -452,65 +679,45 @@ check_nvidia_compatibility() {
     local pending_kernel
     pending_kernel=$(get_pending_kernel_version "$DISTRO")
 
-    if [ -n "$pending_kernel" ]; then
-        # shellcheck disable=SC2059
-        log_info "$(printf "$MSG_NVIDIA_KERNEL_PENDING" "$pending_kernel")"
+    if [ -z "$pending_kernel" ]; then
+        # Kein Kernel-Update verfügbar
+        return 0
+    fi
 
-        # Prüfe DKMS-Status
-        # shellcheck disable=SC2059
-        log_info "$(printf "$MSG_NVIDIA_DKMS_CHECK" "$pending_kernel")"
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_NVIDIA_KERNEL_PENDING" "$pending_kernel")"
 
-        if check_nvidia_dkms_status "$pending_kernel"; then
-            log_info "$MSG_NVIDIA_DKMS_OK"
-            return 0
-        else
-            local dkms_status=$?
+    # Prüfe DKMS-Status
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_NVIDIA_DKMS_CHECK" "$pending_kernel")"
 
-            if [ $dkms_status -eq 2 ]; then
-                # DKMS-Module müssen neu gebaut werden
-                log_warning "$MSG_NVIDIA_DKMS_REBUILD"
+    if check_nvidia_dkms_status "$pending_kernel"; then
+        log_info "$MSG_NVIDIA_DKMS_OK"
+        return 0
+    fi
 
-                # Frage ob DKMS rebuild durchgeführt werden soll
-                if [ "${NVIDIA_AUTO_DKMS_REBUILD:-false}" != "true" ]; then
-                    echo -e "${YELLOW}$MSG_NVIDIA_DKMS_REBUILD_NOW [j/N]:${NC} "
-                    read -r response
-                    if [[ ! "$response" =~ ^[jJyY]$ ]]; then
-                        log_warning "$MSG_NVIDIA_DKMS_MISSING"
-                        log_warning "$MSG_NVIDIA_UPDATE_RECOMMENDED"
+    # DKMS-Module fehlen oder müssen neu gebaut werden
+    log_warning "$MSG_NVIDIA_DKMS_REBUILD"
 
-                        echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
-                        read -r response
-                        if [[ ! "$response" =~ ^[jJyY]$ ]]; then
-                            log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
-                            exit 0
-                        fi
-                        return 0
-                    fi
-                fi
+    #######################################################
+    # DEFAULT-VERHALTEN (Sicher für normale User)
+    #######################################################
+    if [ "${NVIDIA_ALLOW_UNSUPPORTED_KERNEL:-false}" != "true" ]; then
+        # Test-Build durchführen um Kompatibilität zu prüfen
+        if ! test_dkms_build "$pending_kernel"; then
+            # Build fehlgeschlagen → Kernel nicht kompatibel
+            # shellcheck disable=SC2059
+            log_warning "$(printf "$MSG_NVIDIA_KERNEL_UNSUPPORTED" "$nvidia_version" "$pending_kernel")"
+            log_warning "$MSG_NVIDIA_KERNEL_HOLD"
+            log_warning "$MSG_NVIDIA_CHECK_NVIDIA_DOCS"
 
-                # DKMS rebuild durchführen
-                log_info "Führe DKMS autoinstall durch..."
-                if dkms autoinstall -k "$pending_kernel" 2>&1 | tee -a "$LOG_FILE"; then
-                    log_info "$MSG_NVIDIA_DKMS_REBUILD_SUCCESS"
-                    return 0
-                else
-                    log_error "$MSG_NVIDIA_DKMS_REBUILD_FAILED"
-                    log_warning "$MSG_NVIDIA_CONTINUE_ANYWAY"
-
-                    echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
-                    read -r response
-                    if [[ ! "$response" =~ ^[jJyY]$ ]]; then
-                        log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
-                        exit 0
-                    fi
-                fi
+            # Kernel-Update zurückhalten
+            if hold_kernel_update "$DISTRO"; then
+                # Erfolgreich zurückgehalten, Rest des Updates fortsetzen
+                return 0
             else
-                # DKMS nicht verfügbar oder andere Probleme
-                log_warning "$MSG_NVIDIA_DKMS_MISSING"
-                # shellcheck disable=SC2059
-                log_warning "$(printf "$MSG_NVIDIA_INCOMPATIBLE" "$pending_kernel")"
-                log_warning "$MSG_NVIDIA_UPDATE_RECOMMENDED"
-
+                # Konnte nicht zurückhalten → User fragen
+                echo
                 echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
                 read -r response
                 if [[ ! "$response" =~ ^[jJyY]$ ]]; then
@@ -518,10 +725,127 @@ check_nvidia_compatibility() {
                     exit 0
                 fi
             fi
+        else
+            # Test-Build erfolgreich → DKMS sollte funktionieren
+            log_info "$MSG_NVIDIA_BUILD_TEST_SUCCESS"
+
+            # Versuche DKMS autoinstall
+            log_info "Führe DKMS autoinstall durch..."
+            if dkms autoinstall -k "$pending_kernel" 2>&1 | tee -a "$LOG_FILE"; then
+                log_info "$MSG_NVIDIA_DKMS_REBUILD_SUCCESS"
+
+                # Prüfe Secure Boot und signiere wenn nötig
+                handle_secureboot_signing "$pending_kernel"
+
+                return 0
+            else
+                log_error "$MSG_NVIDIA_DKMS_REBUILD_FAILED"
+
+                # Selbst wenn Test erfolgreich war, Build fehlgeschlagen
+                # Kernel zurückhalten
+                log_warning "$MSG_NVIDIA_KERNEL_HOLD"
+                if hold_kernel_update "$DISTRO"; then
+                    return 0
+                else
+                    echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
+                    read -r response
+                    if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                        log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
+                        exit 0
+                    fi
+                fi
+            fi
+        fi
+    else
+        #######################################################
+        # POWER-USER-MODUS (Risiko akzeptiert)
+        #######################################################
+        log_warning "$MSG_NVIDIA_POWERUSER_MODE"
+        log_warning "$MSG_NVIDIA_POWERUSER_RISK"
+
+        # Frage ob DKMS rebuild durchgeführt werden soll
+        if [ "${NVIDIA_AUTO_DKMS_REBUILD:-false}" != "true" ]; then
+            echo -e "${YELLOW}$MSG_NVIDIA_DKMS_REBUILD_NOW [j/N]:${NC} "
+            read -r response
+            if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
+                exit 0
+            fi
+        fi
+
+        # DKMS rebuild durchführen (auch wenn riskant)
+        log_info "Führe DKMS autoinstall durch..."
+        if dkms autoinstall -k "$pending_kernel" 2>&1 | tee -a "$LOG_FILE"; then
+            log_info "$MSG_NVIDIA_DKMS_REBUILD_SUCCESS"
+
+            # Prüfe Secure Boot und signiere wenn nötig
+            handle_secureboot_signing "$pending_kernel"
+
+            return 0
+        else
+            log_error "$MSG_NVIDIA_DKMS_REBUILD_FAILED"
+
+            echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
+            read -r response
+            if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
+                exit 0
+            fi
         fi
     fi
 
     return 0
+}
+
+# Behandelt Secure Boot Signierung nach DKMS-Build
+handle_secureboot_signing() {
+    local kernel_version="$1"
+
+    # Prüfe Secure Boot Status
+    if is_secureboot_enabled; then
+        log_info "$MSG_NVIDIA_SECUREBOOT_ACTIVE"
+        log_info "$MSG_NVIDIA_MOK_CHECK"
+
+        if check_mok_keys; then
+            log_info "$MSG_NVIDIA_MOK_FOUND"
+            log_info "$MSG_NVIDIA_MOK_SIGN_REQUIRED"
+
+            # Automatische Signierung oder fragen?
+            local do_sign=false
+            if [ "${NVIDIA_AUTO_MOK_SIGN:-false}" = "true" ]; then
+                do_sign=true
+            else
+                echo -e "${YELLOW}Module jetzt signieren? [J/n]:${NC} "
+                read -r response
+                if [[ "$response" =~ ^[jJyY]$|^$ ]]; then
+                    do_sign=true
+                fi
+            fi
+
+            if [ "$do_sign" = true ]; then
+                if sign_nvidia_modules "$kernel_version"; then
+                    log_info "$MSG_NVIDIA_MOK_SIGN_SUCCESS"
+                else
+                    log_warning "$MSG_NVIDIA_MOK_SIGN_FAILED"
+                    log_warning "$MSG_NVIDIA_MOK_DOCS"
+                fi
+            fi
+        else
+            log_warning "$MSG_NVIDIA_MOK_MISSING"
+            log_warning "$MSG_NVIDIA_MOK_ENROLLMENT_NEEDED"
+            log_warning "$MSG_NVIDIA_MOK_ENROLLMENT_INFO"
+            log_info "$MSG_NVIDIA_MOK_DOCS"
+        fi
+    elif is_secureboot_enabled; then
+        case $? in
+            1)
+                log_info "$MSG_NVIDIA_SECUREBOOT_INACTIVE"
+                ;;
+            2)
+                log_warning "$MSG_NVIDIA_SECUREBOOT_UNKNOWN"
+                ;;
+        esac
+    fi
 }
 
 # Sicheres autoremove mit Kernel-Schutz

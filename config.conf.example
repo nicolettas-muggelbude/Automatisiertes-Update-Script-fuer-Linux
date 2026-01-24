@@ -65,3 +65,17 @@ NVIDIA_CHECK_DISABLED=false
 # Wenn true: DKMS-Module werden automatisch neu gebaut (keine Nachfrage)
 # Wenn false: User wird gefragt ob DKMS rebuild durchgeführt werden soll
 NVIDIA_AUTO_DKMS_REBUILD=false
+
+# NVIDIA Kernel-Kompatibilität: Nicht unterstützte Kernel erlauben (true/false)
+# WARNUNG: Power-User Option! Nur für erfahrene Benutzer!
+# - false (Standard): Kernel-Update wird ausgeschlossen wenn NVIDIA inkompatibel
+# - true: DKMS-Rebuild wird auch bei offiziell nicht unterstützten Kerneln versucht
+# Risiko: Instabilität, schwarzer Bildschirm, nicht bootbares System
+NVIDIA_ALLOW_UNSUPPORTED_KERNEL=false
+
+# Automatische MOK-Signierung für Secure Boot (true/false)
+# Wenn Secure Boot aktiv ist und NVIDIA-Module neu gebaut werden:
+# - true: Automatische Signierung ohne Nachfrage (benötigt enrollte MOK-Keys)
+# - false: User wird gefragt ob Module signiert werden sollen
+# Hinweis: MOK-Keys müssen bereits mit mokutil enrollt sein
+NVIDIA_AUTO_MOK_SIGN=false

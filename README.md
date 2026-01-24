@@ -917,7 +917,95 @@ NVIDIA_AUTO_DKMS_REBUILD=true
 
 Das Script führt dann `dkms autoinstall` automatisch durch, ohne nachzufragen.
 
-### Konfiguration
+### Secure Boot Unterstützung
+
+Wenn **Secure Boot** aktiv ist, müssen NVIDIA-Module nach dem DKMS-Build signiert werden:
+
+```bash
+# [INFO] Secure Boot ist aktiv
+# [INFO] Prüfe MOK (Machine Owner Key) Status
+# [INFO] MOK-Schlüssel gefunden
+# [INFO] Signiere NVIDIA-Module mit MOK
+# [INFO] Module erfolgreich signiert
+```
+
+**MOK-Keys enrollen** (einmalig erforderlich):
+
+```bash
+# Generiere MOK-Schlüssel (falls nicht vorhanden)
+sudo mokutil --import /var/lib/shim-signed/mok/MOK.der
+
+# Beim nächsten Neustart: MOK Management Utility nutzen
+# Passwort eingeben und Key enrollen
+```
+
+**Automatische Signierung:**
+
+```bash
+# In config.conf:
+NVIDIA_AUTO_MOK_SIGN=true
+```
+
+### Kernel-Hold bei Inkompatibilität (NEU!)
+
+**Problem:** NVIDIA unterstützt manchmal neue Kernel-Versionen noch nicht offiziell.
+
+**Standard-Verhalten (sicherer Modus):**
+
+Das Script testet DKMS-Build **vor** dem Update. Bei Inkompatibilität:
+
+```bash
+# [WARNUNG] NVIDIA-Treiber 535.129.03 unterstützt Kernel 6.8.0-40 noch nicht
+# [WARNUNG] Kernel-Update wird zurückgehalten (sicherer Modus)
+# [INFO] Kernel erfolgreich zurückgehalten: linux-image-generic
+# [INFO] Kernel wird NICHT aktualisiert bis NVIDIA-Treiber bereit ist
+# [INFO] Später freigeben mit: sudo apt-mark unhold linux-image-generic
+```
+
+Das Update **läuft weiter** und installiert alle anderen Pakete - nur der Kernel wird übersprungen!
+
+**Kernel später freigeben:**
+
+```bash
+# Debian/Ubuntu
+sudo apt-mark unhold linux-image-generic linux-headers-generic
+
+# RHEL/Fedora
+sudo dnf versionlock delete kernel kernel-core kernel-modules
+
+# openSUSE
+sudo zypper removelock kernel-default
+
+# Arch (manuelle /etc/pacman.conf Bearbeitung)
+# Entferne: IgnorePkg = linux linux-headers
+```
+
+### Power-User Modus (⚠️ Risikoreich!)
+
+Für **erfahrene Benutzer**, die trotz offiziell nicht unterstützter Kernel ein Update wagen:
+
+```bash
+# In config.conf:
+NVIDIA_ALLOW_UNSUPPORTED_KERNEL=true
+```
+
+**Warnung beim Update:**
+
+```bash
+# [WARNUNG] Power-User-Modus: Versuche Update trotz Warnung
+# [WARNUNG] WARNUNG: Risiko von Instabilität oder schwarzem Bildschirm
+# Möchtest du DKMS-Module jetzt neu bauen? [j/N]: j
+```
+
+**⚠️ Risiken:**
+- System bootet nicht mehr (schwarzer Bildschirm)
+- Kein GUI, nur Textmodus
+- NVIDIA-Features funktionieren nicht
+- Instabilität und Abstürze
+
+**Empfehlung:** Nur aktivieren wenn du weißt was du tust und Fallback-Kernel vorhanden sind!
+
+### Konfiguration (Übersicht)
 
 ```bash
 # NVIDIA-Prüfung komplett deaktivieren (nicht empfohlen)
@@ -925,6 +1013,12 @@ NVIDIA_CHECK_DISABLED=true
 
 # Automatischer DKMS-Rebuild ohne Nachfrage
 NVIDIA_AUTO_DKMS_REBUILD=true
+
+# Power-User Modus: Nicht unterstützte Kernel erlauben (risikoreich!)
+NVIDIA_ALLOW_UNSUPPORTED_KERNEL=false  # Standard: false = sicher
+
+# Automatische MOK-Signierung für Secure Boot
+NVIDIA_AUTO_MOK_SIGN=false
 ```
 
 ### Voraussetzungen

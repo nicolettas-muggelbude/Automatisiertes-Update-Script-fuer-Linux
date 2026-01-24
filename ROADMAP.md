@@ -297,6 +297,31 @@ Proprietäre NVIDIA-Treiber erfordern nach Kernel-Updates oft ein DKMS-Rebuild. 
    - Option zum Abbrechen des Updates
    - Empfehlung NVIDIA-Treiber zu aktualisieren
 
+6. ✅ Secure Boot Support (MOK-Signierung)
+   - Automatische Erkennung von Secure Boot Status
+   - Prüfung ob MOK (Machine Owner Key) enrollt ist
+   - Automatische Signierung von DKMS-Modulen nach Rebuild
+   - Unterstützung für verschiedene MOK-Pfade
+   - Erkennung von sign-file Tools (kernel-headers, kbuild, kmodsign)
+   - Optional: Automatische Signierung (CONFIG: `NVIDIA_AUTO_MOK_SIGN=true`)
+
+7. ✅ Kernel-Hold-Mechanismus (Sicherer Default-Modus)
+   - **Default-Verhalten**: Test DKMS-Build VOR Update
+   - Bei Inkompatibilität: Kernel-Update wird automatisch ausgeschlossen
+   - Kernel wird "gehalten" (apt-mark hold, dnf versionlock, zypper addlock)
+   - Rest des Systems wird normal aktualisiert
+   - User erhält Info wie Kernel später freigegeben werden kann
+   - Distribution-spezifische Hold-Befehle für alle 6 Distributionsfamilien
+   - Verhindert "schwarzen Bildschirm" durch fehlgeschlagene Kernel-Updates
+
+8. ✅ Power-User-Modus (Opt-in)
+   - Optional: Nicht unterstützte Kernel trotzdem zulassen
+   - CONFIG: `NVIDIA_ALLOW_UNSUPPORTED_KERNEL=true`
+   - Explizite Warnung über Risiken (Instabilität, schwarzer Bildschirm)
+   - DKMS-Rebuild wird trotz offiziell nicht unterstützter Kernel-Version versucht
+   - Mit Secure Boot Support kombinierbar
+   - Für erfahrene Benutzer mit Fallback-Optionen
+
 **Konfiguration (config.conf):**
 ```bash
 # NVIDIA-Prüfung deaktivieren (default: false)
@@ -304,13 +329,26 @@ NVIDIA_CHECK_DISABLED=false
 
 # Automatischer DKMS-Rebuild ohne Nachfrage (default: false)
 NVIDIA_AUTO_DKMS_REBUILD=false
+
+# Power-User Modus: Nicht unterstützte Kernel erlauben (default: false)
+# WARNUNG: Risikoreich! Nur für erfahrene Benutzer mit Fallback-Optionen
+NVIDIA_ALLOW_UNSUPPORTED_KERNEL=false
+
+# Automatische MOK-Signierung für Secure Boot (default: false)
+NVIDIA_AUTO_MOK_SIGN=false
 ```
 
 **Technische Umsetzung:**
 - `is_nvidia_installed()` - Erkennt NVIDIA-Treiber
-- `get_pending_kernel_version()` - Ermittelt pending Kernel
+- `get_pending_kernel_version()` - Ermittelt pending Kernel (alle 6 Distributionen)
 - `check_nvidia_dkms_status()` - Prüft DKMS-Status
-- `check_nvidia_compatibility()` - Hauptfunktion
+- `is_secureboot_enabled()` - Erkennt Secure Boot (mokutil, bootctl, EFI vars)
+- `check_mok_keys()` - Prüft MOK-Schlüssel
+- `sign_nvidia_modules()` - Signiert DKMS-Module mit MOK
+- `hold_kernel_update()` - Hält Kernel-Update zurück (distributionsspezifisch)
+- `test_dkms_build()` - Testet DKMS-Build ohne Installation
+- `handle_secureboot_signing()` - Post-Build Secure Boot Handling
+- `check_nvidia_compatibility()` - Hauptfunktion mit Safe/Power-User Modi
 
 **Ablauf:**
 1. Script startet
@@ -323,11 +361,17 @@ NVIDIA_AUTO_DKMS_REBUILD=false
 - ✅ Verhindert "schwarzer Bildschirm" nach Kernel-Update
 - ✅ Proaktive Warnung vor Problemen
 - ✅ Automatischer Fix verfügbar (DKMS rebuild)
-- ✅ User behält Kontrolle (Opt-out möglich)
+- ✅ Kernel-Hold als sicherer Default (keine Frage mehr nötig!)
+- ✅ Secure Boot vollständig unterstützt
+- ✅ User behält Kontrolle (Power-User Opt-in möglich)
+- ✅ Conservative Defaults, Power-User Optionen vorhanden
 
 **Mehrsprachigkeit:**
-- ✅ 16 neue Sprachmeldungen (DE/EN)
+- ✅ 41 neue Sprachmeldungen (DE/EN)
 - ✅ Alle NVIDIA-bezogenen Messages übersetzt
+- ✅ Secure Boot Messages
+- ✅ Kernel-Hold Messages
+- ✅ Power-User Warnungen
 
 ---
 
