@@ -55,3 +55,13 @@ ENABLE_DESKTOP_NOTIFICATION=true
 
 # Notification-Dauer in Millisekunden (0 = Standard des Systems)
 NOTIFICATION_TIMEOUT=5000
+
+# NVIDIA-Kernel-Kompatibilitätsprüfung (true/false)
+# Prüft vor Updates ob NVIDIA-Treiber mit neuem Kernel kompatibel sind
+# Warnt bei fehlenden DKMS-Modulen und bietet automatischen Rebuild an
+NVIDIA_CHECK_DISABLED=false
+
+# Automatischer DKMS-Rebuild für NVIDIA (true/false)
+# Wenn true: DKMS-Module werden automatisch neu gebaut (keine Nachfrage)
+# Wenn false: User wird gefragt ob DKMS rebuild durchgeführt werden soll
+NVIDIA_AUTO_DKMS_REBUILD=false

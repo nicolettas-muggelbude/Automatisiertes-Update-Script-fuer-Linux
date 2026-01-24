@@ -36,6 +36,8 @@ AUTO_UPGRADE=false
 UPGRADE_NOTIFY_EMAIL=true
 ENABLE_DESKTOP_NOTIFICATION=true
 NOTIFICATION_TIMEOUT=5000
+NVIDIA_CHECK_DISABLED=false
+NVIDIA_AUTO_DKMS_REBUILD=false
 
 # Config-Migration Funktion (wird nach load_language aufgerufen)
 migrate_config() {
@@ -306,6 +308,199 @@ count_stable_kernels_redhat() {
         kernel_count=0
     fi
     echo "$kernel_count"
+}
+
+#############################################################
+# NVIDIA-Kernel-Kompatibilitätsprüfung
+#############################################################
+
+# Prüft ob NVIDIA-Treiber installiert sind
+is_nvidia_installed() {
+    # Prüfe auf nvidia-smi (NVIDIA System Management Interface)
+    if command -v nvidia-smi &> /dev/null; then
+        return 0
+    fi
+
+    # Prüfe auf geladene NVIDIA Kernel-Module
+    if lsmod 2>/dev/null | grep -q "^nvidia"; then
+        return 0
+    fi
+
+    # Prüfe auf NVIDIA in lspci
+    if command -v lspci &> /dev/null && lspci 2>/dev/null | grep -qi "nvidia"; then
+        # NVIDIA Hardware gefunden, prüfe ob Treiber installiert
+        if [ -d /proc/driver/nvidia ] || [ -f /sys/module/nvidia/version ]; then
+            return 0
+        fi
+    fi
+
+    return 1
+}
+
+# Ermittelt die verfügbare Kernel-Version im Update
+get_pending_kernel_version() {
+    local distro="$1"
+    local pending_kernel=""
+
+    case "$distro" in
+        debian|ubuntu|linuxmint|pop)
+            # Prüfe verfügbare Kernel-Pakete
+            if command -v apt-cache &> /dev/null; then
+                pending_kernel=$(apt-cache policy linux-image-generic 2>/dev/null | \
+                    grep "Candidate:" | awk '{print $2}' | grep -oP '\d+\.\d+\.\d+-\d+' | head -1)
+            fi
+            ;;
+        fedora|rhel|centos|rocky|almalinux)
+            # Prüfe verfügbare Kernel-Pakete
+            if command -v dnf &> /dev/null; then
+                pending_kernel=$(dnf list --available kernel 2>/dev/null | \
+                    grep "^kernel" | awk '{print $2}' | head -1 | sed 's/\..*$//')
+            elif command -v yum &> /dev/null; then
+                pending_kernel=$(yum list available kernel 2>/dev/null | \
+                    grep "^kernel" | awk '{print $2}' | head -1 | sed 's/\..*$//')
+            fi
+            ;;
+        arch|manjaro|endeavouros|garuda|arcolinux)
+            # Prüfe verfügbare Kernel-Pakete
+            if command -v pacman &> /dev/null; then
+                pending_kernel=$(pacman -Si linux 2>/dev/null | \
+                    grep "^Version" | awk '{print $3}' | head -1)
+            fi
+            ;;
+    esac
+
+    echo "$pending_kernel"
+}
+
+# Prüft DKMS-Status für NVIDIA
+check_nvidia_dkms_status() {
+    local target_kernel="$1"
+
+    # Prüfe ob DKMS installiert ist
+    if ! command -v dkms &> /dev/null; then
+        return 1  # DKMS nicht installiert
+    fi
+
+    # Prüfe ob NVIDIA DKMS-Module existieren
+    local nvidia_dkms
+    nvidia_dkms=$(dkms status 2>/dev/null | grep -i nvidia)
+
+    if [ -z "$nvidia_dkms" ]; then
+        return 1  # Keine NVIDIA DKMS-Module gefunden
+    fi
+
+    # Wenn target_kernel angegeben, prüfe ob Module für diesen Kernel gebaut sind
+    if [ -n "$target_kernel" ]; then
+        if echo "$nvidia_dkms" | grep -q "$target_kernel"; then
+            return 0  # Module für target Kernel vorhanden
+        else
+            return 2  # Module müssen neu gebaut werden
+        fi
+    fi
+
+    return 0  # DKMS-Module vorhanden (generell)
+}
+
+# Hauptfunktion: NVIDIA-Kompatibilitätsprüfung vor Update
+check_nvidia_compatibility() {
+    # Prüfung deaktiviert?
+    if [ "${NVIDIA_CHECK_DISABLED:-false}" = "true" ]; then
+        log_info "$MSG_NVIDIA_SKIP_CHECK"
+        return 0
+    fi
+
+    # Ist NVIDIA installiert?
+    if ! is_nvidia_installed; then
+        log_info "$MSG_NVIDIA_NOT_INSTALLED"
+        return 0
+    fi
+
+    # NVIDIA-Treiber erkannt
+    local nvidia_version=""
+    if command -v nvidia-smi &> /dev/null; then
+        nvidia_version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)
+    elif [ -f /sys/module/nvidia/version ]; then
+        nvidia_version=$(cat /sys/module/nvidia/version 2>/dev/null)
+    fi
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_NVIDIA_DETECTED" "$nvidia_version")"
+    log_info "$MSG_NVIDIA_CHECK"
+
+    # Ermittle pending Kernel-Version
+    local pending_kernel
+    pending_kernel=$(get_pending_kernel_version "$DISTRO")
+
+    if [ -n "$pending_kernel" ]; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_NVIDIA_KERNEL_PENDING" "$pending_kernel")"
+
+        # Prüfe DKMS-Status
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_NVIDIA_DKMS_CHECK" "$pending_kernel")"
+
+        if check_nvidia_dkms_status "$pending_kernel"; then
+            log_info "$MSG_NVIDIA_DKMS_OK"
+            return 0
+        else
+            local dkms_status=$?
+
+            if [ $dkms_status -eq 2 ]; then
+                # DKMS-Module müssen neu gebaut werden
+                log_warning "$MSG_NVIDIA_DKMS_REBUILD"
+
+                # Frage ob DKMS rebuild durchgeführt werden soll
+                if [ "${NVIDIA_AUTO_DKMS_REBUILD:-false}" != "true" ]; then
+                    echo -e "${YELLOW}$MSG_NVIDIA_DKMS_REBUILD_NOW [j/N]:${NC} "
+                    read -r response
+                    if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                        log_warning "$MSG_NVIDIA_DKMS_MISSING"
+                        log_warning "$MSG_NVIDIA_UPDATE_RECOMMENDED"
+
+                        echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
+                        read -r response
+                        if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                            log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
+                            exit 0
+                        fi
+                        return 0
+                    fi
+                fi
+
+                # DKMS rebuild durchführen
+                log_info "Führe DKMS autoinstall durch..."
+                if dkms autoinstall -k "$pending_kernel" 2>&1 | tee -a "$LOG_FILE"; then
+                    log_info "$MSG_NVIDIA_DKMS_REBUILD_SUCCESS"
+                    return 0
+                else
+                    log_error "$MSG_NVIDIA_DKMS_REBUILD_FAILED"
+                    log_warning "$MSG_NVIDIA_CONTINUE_ANYWAY"
+
+                    echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
+                    read -r response
+                    if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                        log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
+                        exit 0
+                    fi
+                fi
+            else
+                # DKMS nicht verfügbar oder andere Probleme
+                log_warning "$MSG_NVIDIA_DKMS_MISSING"
+                # shellcheck disable=SC2059
+                log_warning "$(printf "$MSG_NVIDIA_INCOMPATIBLE" "$pending_kernel")"
+                log_warning "$MSG_NVIDIA_UPDATE_RECOMMENDED"
+
+                echo -e "${YELLOW}$MSG_NVIDIA_CONTINUE_ANYWAY [j/N]:${NC} "
+                read -r response
+                if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                    log_info "$MSG_NVIDIA_UPDATE_CANCELLED"
+                    exit 0
+                fi
+            fi
+        fi
+    fi
+
+    return 0
 }
 
 # Sicheres autoremove mit Kernel-Schutz
@@ -791,6 +986,9 @@ fi
 
 # Distribution erkennen
 detect_distro
+
+# NVIDIA-Kernel-Kompatibilität prüfen (VOR dem Update!)
+check_nvidia_compatibility
 
 # Wenn Upgrade-Modus, führe Upgrade durch
 if [ "$UPGRADE_MODE" = true ]; then

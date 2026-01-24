@@ -128,6 +128,24 @@ MSG_CONFIG_OLD_DEPRECATED="Der alte Config-Pfad ist veraltet und wird in v2.0.0 
 MSG_CONFIG_LOCATION="Verwende Konfiguration von: %s"
 MSG_CONFIG_NOT_FOUND="Keine Konfiguration gefunden. Bitte install.sh ausführen."
 
+# NVIDIA-Kernel-Kompatibilität
+MSG_NVIDIA_CHECK="Prüfe NVIDIA-Treiber-Kompatibilität"
+MSG_NVIDIA_DETECTED="NVIDIA-Treiber erkannt: %s"
+MSG_NVIDIA_NOT_INSTALLED="Keine NVIDIA-Treiber gefunden"
+MSG_NVIDIA_KERNEL_PENDING="Kernel-Update verfügbar: %s"
+MSG_NVIDIA_DKMS_CHECK="Prüfe DKMS-Status für Kernel %s"
+MSG_NVIDIA_DKMS_OK="DKMS-Module vorhanden und kompatibel"
+MSG_NVIDIA_DKMS_MISSING="WARNUNG: DKMS-Module für neuen Kernel fehlen"
+MSG_NVIDIA_DKMS_REBUILD="DKMS-Module müssen für neuen Kernel neu gebaut werden"
+MSG_NVIDIA_DKMS_REBUILD_NOW="Möchtest du DKMS-Module jetzt neu bauen?"
+MSG_NVIDIA_DKMS_REBUILD_SUCCESS="DKMS-Module erfolgreich neu gebaut"
+MSG_NVIDIA_DKMS_REBUILD_FAILED="Fehler beim Neu-Bauen der DKMS-Module"
+MSG_NVIDIA_INCOMPATIBLE="WARNUNG: NVIDIA-Treiber möglicherweise inkompatibel mit Kernel %s"
+MSG_NVIDIA_UPDATE_RECOMMENDED="Empfehlung: Aktualisiere NVIDIA-Treiber vor Kernel-Update"
+MSG_NVIDIA_CONTINUE_ANYWAY="Trotzdem mit Update fortfahren?"
+MSG_NVIDIA_UPDATE_CANCELLED="Update abgebrochen - bitte NVIDIA-Treiber aktualisieren"
+MSG_NVIDIA_SKIP_CHECK="NVIDIA-Prüfung wird übersprungen (NVIDIA_CHECK_DISABLED=true)"
+
 # Sprachinfo
 LANGUAGE_NAME="Deutsch"
 LANGUAGE_CODE="de"

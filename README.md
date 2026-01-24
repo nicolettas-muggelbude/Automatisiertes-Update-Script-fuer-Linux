@@ -859,6 +859,107 @@ KERNEL_PROTECTION=false
 MIN_KERNELS=5  # Behält mehr Fallback-Kernel
 ```
 
+## NVIDIA-Kernel-Kompatibilitätsprüfung
+
+**NEU in v1.6.0:** Das Script prüft automatisch die NVIDIA-Treiber-Kompatibilität VOR Kernel-Updates!
+
+### Problem
+
+Proprietäre NVIDIA-Treiber müssen nach Kernel-Updates neu kompiliert werden (DKMS). Ohne funktionierende Treiber startet das System nach dem Neustart möglicherweise nicht richtig:
+- Schwarzer Bildschirm
+- Kein X11/Wayland
+- System bootet in Textmodus
+
+### Lösung
+
+Das Script prüft **vor dem Update**:
+1. Ob NVIDIA-Treiber installiert sind
+2. Welcher Kernel im Update verfügbar ist
+3. Ob DKMS-Module für den neuen Kernel existieren
+4. Bietet automatischen DKMS-Rebuild an
+
+### Funktionsweise
+
+```bash
+sudo ./update.sh
+
+# [INFO] NVIDIA-Treiber erkannt: 535.129.03
+# [INFO] Prüfe NVIDIA-Treiber-Kompatibilität
+# [INFO] Kernel-Update verfügbar: 6.5.0-35-generic
+# [INFO] Prüfe DKMS-Status für Kernel 6.5.0-35-generic
+```
+
+**Falls DKMS-Module fehlen:**
+
+```bash
+# [WARNUNG] DKMS-Module müssen für neuen Kernel neu gebaut werden
+# Möchtest du DKMS-Module jetzt neu bauen? [j/N]: j
+# [INFO] Führe DKMS autoinstall durch...
+# [INFO] DKMS-Module erfolgreich neu gebaut
+```
+
+**Falls DKMS-Rebuild fehlschlägt:**
+
+```bash
+# [FEHLER] Fehler beim Neu-Bauen der DKMS-Module
+# [WARNUNG] Trotzdem mit Update fortfahren? [j/N]: n
+# [INFO] Update abgebrochen - bitte NVIDIA-Treiber aktualisieren
+```
+
+### Automatischer DKMS-Rebuild
+
+Für Server/automatisierte Umgebungen kannst du den Rebuild automatisieren:
+
+```bash
+# In config.conf:
+NVIDIA_AUTO_DKMS_REBUILD=true
+```
+
+Das Script führt dann `dkms autoinstall` automatisch durch, ohne nachzufragen.
+
+### Konfiguration
+
+```bash
+# NVIDIA-Prüfung komplett deaktivieren (nicht empfohlen)
+NVIDIA_CHECK_DISABLED=true
+
+# Automatischer DKMS-Rebuild ohne Nachfrage
+NVIDIA_AUTO_DKMS_REBUILD=true
+```
+
+### Voraussetzungen
+
+Für automatischen DKMS-Rebuild:
+```bash
+# Debian/Ubuntu
+sudo apt-get install dkms
+
+# RHEL/Fedora
+sudo dnf install dkms
+
+# Arch Linux
+sudo pacman -S dkms
+```
+
+### Unterstützte Distributionen
+
+Die NVIDIA-Prüfung funktioniert auf:
+- ✅ Debian/Ubuntu/Mint
+- ✅ RHEL/Fedora/CentOS/Rocky/AlmaLinux
+- ✅ Arch Linux/Manjaro/EndeavourOS
+
+### Manueller DKMS-Rebuild
+
+Falls du DKMS manuell neu bauen möchtest:
+
+```bash
+# Für alle NVIDIA-Module
+sudo dkms autoinstall
+
+# Für spezifischen Kernel
+sudo dkms autoinstall -k 6.5.0-35-generic
+```
+
 ## Sicherheitshinweise
 
 - Das Script benötigt root-Rechte für System-Updates

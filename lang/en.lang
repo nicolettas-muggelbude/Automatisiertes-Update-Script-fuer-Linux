@@ -128,6 +128,24 @@ MSG_CONFIG_OLD_DEPRECATED="The old config path is deprecated and will be removed
 MSG_CONFIG_LOCATION="Using configuration from: %s"
 MSG_CONFIG_NOT_FOUND="No configuration found. Please run install.sh."
 
+# NVIDIA Kernel Compatibility
+MSG_NVIDIA_CHECK="Checking NVIDIA driver compatibility"
+MSG_NVIDIA_DETECTED="NVIDIA driver detected: %s"
+MSG_NVIDIA_NOT_INSTALLED="No NVIDIA drivers found"
+MSG_NVIDIA_KERNEL_PENDING="Kernel update available: %s"
+MSG_NVIDIA_DKMS_CHECK="Checking DKMS status for kernel %s"
+MSG_NVIDIA_DKMS_OK="DKMS modules present and compatible"
+MSG_NVIDIA_DKMS_MISSING="WARNING: DKMS modules missing for new kernel"
+MSG_NVIDIA_DKMS_REBUILD="DKMS modules need to be rebuilt for new kernel"
+MSG_NVIDIA_DKMS_REBUILD_NOW="Do you want to rebuild DKMS modules now?"
+MSG_NVIDIA_DKMS_REBUILD_SUCCESS="DKMS modules successfully rebuilt"
+MSG_NVIDIA_DKMS_REBUILD_FAILED="Error rebuilding DKMS modules"
+MSG_NVIDIA_INCOMPATIBLE="WARNING: NVIDIA driver possibly incompatible with kernel %s"
+MSG_NVIDIA_UPDATE_RECOMMENDED="Recommendation: Update NVIDIA driver before kernel update"
+MSG_NVIDIA_CONTINUE_ANYWAY="Continue with update anyway?"
+MSG_NVIDIA_UPDATE_CANCELLED="Update cancelled - please update NVIDIA driver"
+MSG_NVIDIA_SKIP_CHECK="NVIDIA check skipped (NVIDIA_CHECK_DISABLED=true)"
+
 # Language Info
 LANGUAGE_NAME="English"
 LANGUAGE_CODE="en"

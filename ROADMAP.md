@@ -254,11 +254,78 @@ sudo apt-get install dma
 
 ---
 
-## Version 1.6.0 - XDG-Konformität & Config-Migration
+## Version 1.6.0 - XDG-Konformität, Config-Migration & NVIDIA-Prüfung
 
-### 📁 XDG Base Directory Specification (Priority)
+### 📁 XDG Base Directory Specification
 
 **Status:** ✅ Implementiert (2026-01-24)
+
+### 🎮 NVIDIA-Kernel-Kompatibilitätsprüfung
+
+**Status:** ✅ Implementiert (2026-01-24)
+
+**Motivation:**
+Proprietäre NVIDIA-Treiber erfordern nach Kernel-Updates oft ein DKMS-Rebuild. Ohne funktionierende Treiber kann das System nach dem Neustart nicht mehr richtig starten (kein X11/Wayland). Die Prüfung VOR dem Update verhindert Probleme.
+
+**Features:**
+1. ✅ Erkennung ob NVIDIA-Treiber installiert sind
+   - Prüfung via `nvidia-smi`, `lsmod`, `lspci`
+   - Erkennung der installierten Treiberversion
+
+2. ✅ Abfrage der pending Kernel-Version
+   - Distributionsspezifische Abfrage (Debian, RHEL, Arch)
+   - Erkennung welcher Kernel im Update verfügbar ist
+
+3. ✅ DKMS-Status-Prüfung
+   - Prüfung ob DKMS installiert ist
+   - Prüfung ob NVIDIA DKMS-Module existieren
+   - Prüfung ob Module für neuen Kernel bereits gebaut sind
+
+4. ✅ Automatischer DKMS-Rebuild
+   - Interaktive Nachfrage ob Rebuild durchgeführt werden soll
+   - Optional: Automatischer Rebuild (CONFIG: `NVIDIA_AUTO_DKMS_REBUILD=true`)
+   - `dkms autoinstall` für neuen Kernel
+
+5. ✅ Warnung bei Inkompatibilität
+   - User-Frage ob Update trotzdem durchgeführt werden soll
+   - Option zum Abbrechen des Updates
+   - Empfehlung NVIDIA-Treiber zu aktualisieren
+
+**Konfiguration (config.conf):**
+```bash
+# NVIDIA-Prüfung deaktivieren (default: false)
+NVIDIA_CHECK_DISABLED=false
+
+# Automatischer DKMS-Rebuild ohne Nachfrage (default: false)
+NVIDIA_AUTO_DKMS_REBUILD=false
+```
+
+**Technische Umsetzung:**
+- `is_nvidia_installed()` - Erkennt NVIDIA-Treiber
+- `get_pending_kernel_version()` - Ermittelt pending Kernel
+- `check_nvidia_dkms_status()` - Prüft DKMS-Status
+- `check_nvidia_compatibility()` - Hauptfunktion
+
+**Ablauf:**
+1. Script startet
+2. Distribution erkennen
+3. **NVIDIA-Prüfung durchführen** ← VOR dem Update!
+4. Falls Probleme: User-Interaktion
+5. Update durchführen
+
+**Sicherheitsvorteile:**
+- ✅ Verhindert "schwarzer Bildschirm" nach Kernel-Update
+- ✅ Proaktive Warnung vor Problemen
+- ✅ Automatischer Fix verfügbar (DKMS rebuild)
+- ✅ User behält Kontrolle (Opt-out möglich)
+
+**Mehrsprachigkeit:**
+- ✅ 16 neue Sprachmeldungen (DE/EN)
+- ✅ Alle NVIDIA-bezogenen Messages übersetzt
+
+---
+
+### 📁 XDG Base Directory Specification (Details)
 
 **Motivation:**
 Community-Feedback (@tbreswald): Config-Dateien sollten Linux-Standard-konform in `~/.config/` liegen, nicht im Script-Ordner.
@@ -708,7 +775,7 @@ Features werden priorisiert nach:
 
 - **v1.5.0** ✅ - Upgrade-Check System & Kernel-Schutz (Released: 2025-12-27)
 - **v1.5.1** ✅ - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
-- **v1.6.0** ✅ - **XDG-Konformität & Config-Migration** (Implementiert: 2026-01-24)
+- **v1.6.0** ✅ - **XDG-Konformität, Config-Migration & NVIDIA-Prüfung** (Implementiert: 2026-01-24)
 - **v1.7.0** 📋 - Hooks & Automation (Pre/Post-Update Hooks)
 - **v1.8.0** 📋 - Backup-Integration & Optimierungen
 - **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
