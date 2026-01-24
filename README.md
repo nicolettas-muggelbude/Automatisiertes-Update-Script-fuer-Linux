@@ -90,26 +90,85 @@ Falls du Dateien mit anderen Namen siehst (z.B. `system-update.sh`), sind das **
 
 ---
 
+## Voraussetzungen
+
+### Git installieren (nur für `git clone` Methode)
+
+**⚠️ Wichtig:** Git ist **nur erforderlich**, wenn du das Repository mit `git clone` herunterladen möchtest. Für die ZIP-Download-Methode (siehe unten) wird Git **nicht** benötigt.
+
+**Prüfen ob Git installiert ist:**
+```bash
+git --version
+```
+
+**Git installieren (falls nicht vorhanden):**
+
+```bash
+# Debian/Ubuntu/Mint
+sudo apt-get update
+sudo apt-get install git
+
+# RHEL/CentOS/Fedora/Rocky/AlmaLinux
+sudo dnf install git
+
+# openSUSE/SUSE
+sudo zypper install git
+
+# Arch Linux/Manjaro
+sudo pacman -S git
+
+# Solus
+sudo eopkg install git
+
+# Void Linux
+sudo xbps-install -S git
+```
+
 ## Installation
 
-### 1. Repository klonen oder Dateien herunterladen
+### 1. Repository herunterladen
 
-**Option A: Installation im Home-Verzeichnis (empfohlen)**
+**Option A: Mit Git (empfohlen für einfache Updates)**
 
+Installation im Home-Verzeichnis:
 ```bash
 cd ~
 git clone https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux.git linux-update-script
 cd linux-update-script
 ```
 
-**Option B: Installation in /opt (System-weit)**
-
+Installation in /opt (system-weit):
 ```bash
 cd /opt
 sudo git clone https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux.git linux-update-script
 sudo chown -R $USER:$USER linux-update-script
 cd linux-update-script
 ```
+
+**Vorteil:** Einfaches Update mit `git pull`
+
+**Option B: Ohne Git (ZIP-Download)**
+
+Falls Git nicht verfügbar oder gewünscht:
+
+```bash
+# Download als ZIP
+cd ~
+wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/heads/main.zip
+
+# Oder mit curl:
+curl -L -o main.zip https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/heads/main.zip
+
+# Entpacken
+unzip main.zip
+mv Automatisiertes-Update-Script-fuer-Linux-main linux-update-script
+cd linux-update-script
+
+# ZIP-Datei aufräumen (optional)
+rm ~/main.zip
+```
+
+**Hinweis:** Bei ZIP-Download musst du bei Updates die ZIP-Datei erneut herunterladen und entpacken.
 
 ### 2. Installations-Script ausführen
 
@@ -685,6 +744,81 @@ sudo chown $USER:$USER /var/log/system-updates
    ```
 
    **Hinweis:** Ersetze `USERNAME` mit deinem tatsächlichen Benutzernamen oder verwende den absoluten Pfad zu deiner Installation.
+
+## Script-Updates
+
+Das Update-Script selbst kann auf neue Versionen aktualisiert werden. Die Methode hängt davon ab, wie du es installiert hast.
+
+### Update mit Git (wenn mit `git clone` installiert)
+
+**Vorteil:** Einfachstes Update-Verfahren, Config bleibt automatisch erhalten
+
+```bash
+# Ins Script-Verzeichnis wechseln
+cd ~/linux-update-script
+
+# Oder bei /opt Installation:
+cd /opt/linux-update-script
+
+# Neueste Version holen
+git pull
+
+# Beim ersten Start nach Update auf v1.6.0+ wird Config automatisch migriert
+sudo ./update.sh
+```
+
+**Deine Config bleibt erhalten!** Seit v1.6.0 liegt die Config in `~/.config/linux-update-script/` und wird bei `git pull` nicht überschrieben.
+
+### Update ohne Git (bei ZIP-Installation)
+
+Wenn du das Script als ZIP heruntergeladen hast:
+
+```bash
+# WICHTIG: Zuerst Config sichern (nur bei v1.5.1 oder früher nötig)
+# Seit v1.6.0 liegt Config in ~/.config/ und muss nicht gesichert werden
+cp ~/linux-update-script/config.conf ~/config.conf.backup 2>/dev/null || true
+
+# Alte Version löschen
+rm -rf ~/linux-update-script
+
+# Neue Version herunterladen
+cd ~
+wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/heads/main.zip
+unzip main.zip
+mv Automatisiertes-Update-Script-fuer-Linux-main linux-update-script
+
+# Alte Config wiederherstellen (nur bei v1.5.1 oder früher)
+# Seit v1.6.0 liegt Config in ~/.config/ und wird automatisch gefunden
+if [ -f ~/config.conf.backup ]; then
+    cp ~/config.conf.backup ~/linux-update-script/config.conf
+    rm ~/config.conf.backup
+fi
+
+# Aufräumen
+rm main.zip
+```
+
+**Tipp:** Bei regelmäßigen Updates ist die Git-Methode deutlich einfacher!
+
+### Prüfen welche Installationsmethode du verwendest
+
+```bash
+cd ~/linux-update-script
+
+# Wenn dieser Befehl ein Git-Repository zeigt, hast du mit git clone installiert:
+git status
+
+# Wenn Fehler "not a git repository", hast du ZIP-Download verwendet
+```
+
+### Aktuelle Version prüfen
+
+Die Version wird im Script angezeigt oder kann in den Dateien nachgeschaut werden:
+
+```bash
+# In CHANGELOG.md (erste Zeilen)
+head -20 ~/linux-update-script/CHANGELOG.md | grep "##"
+```
 
 ## Kernel-Schutz
 

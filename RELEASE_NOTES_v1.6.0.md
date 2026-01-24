@@ -133,9 +133,33 @@ sudo ./update.sh
 - ✅ Migration wird obligatorisch
 - ✅ 6 Monate Vorlaufzeit für Migration
 
+## 📋 Voraussetzungen
+
+### Git installieren (optional)
+
+Git wird **nur** benötigt, wenn du die `git clone` Methode verwendest.
+
+```bash
+# Prüfen ob Git installiert ist
+git --version
+
+# Git installieren (falls nötig):
+# Debian/Ubuntu/Mint
+sudo apt-get install git
+
+# RHEL/Fedora
+sudo dnf install git
+
+# Arch Linux
+sudo pacman -S git
+```
+
+**Alternative:** Download als ZIP von GitHub (kein Git erforderlich)
+- Siehe README.md für Details
+
 ## 🔧 Installation & Update
 
-### Neue Installation
+### Neue Installation (mit Git)
 
 ```bash
 cd ~
@@ -145,6 +169,17 @@ cd linux-update-script
 
 # Config wird automatisch erstellt in:
 # ~/.config/linux-update-script/config.conf
+```
+
+### Neue Installation (ohne Git)
+
+```bash
+cd ~
+wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/heads/main.zip
+unzip main.zip
+mv Automatisiertes-Update-Script-fuer-Linux-main linux-update-script
+cd linux-update-script
+./install.sh
 ```
 
 ### Update von v1.5.1
