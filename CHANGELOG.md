@@ -7,6 +7,59 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-01-24
+
+### Hinzugefügt
+- **XDG Base Directory Specification**: Konfigurations-Dateien folgen jetzt dem Linux-Standard
+  - Neue Config-Location: `~/.config/linux-update-script/config.conf`
+  - Respektiert `$XDG_CONFIG_HOME` Umgebungsvariable
+  - Config bleibt beim Script-Update (git pull) erhalten
+  - Multi-User-fähig (jeder User eigene Config)
+- **Automatische Config-Migration**: Nahtloser Übergang von alter zu neuer Config
+  - `migrate_config()` - Automatische Migration beim ersten Start nach Update
+  - Alte Config wird als `.migrated` Backup gesichert
+  - Keine manuellen Schritte nötig
+  - Vollständig backwards-kompatibel
+- **Fallback-Mechanismus**: Intelligente Config-Suche in folgender Reihenfolge:
+  1. `~/.config/linux-update-script/config.conf` (XDG, bevorzugt)
+  2. `/etc/linux-update-script/config.conf` (system-weit)
+  3. `./config.conf` (alt, deprecated seit v1.6.0, entfernt in v2.0.0)
+- **Mehrsprachigkeit**: 8 neue Sprachmeldungen für Config-Migration
+  - Alle Messages in Deutsch (de.lang) und Englisch (en.lang)
+  - MSG_CONFIG_MIGRATE_* - Migrations-Meldungen
+  - MSG_CONFIG_LOCATION - Info über verwendete Config
+
+### Geändert
+- **install.sh**: Erstellt Config jetzt direkt in `~/.config/linux-update-script/`
+  - Zeigt neuen Konfigurations-Pfad während Installation an
+  - Bietet Migration alter Config an (falls vorhanden)
+  - Keine Änderungen an bestehenden Workflow nötig
+- **update.sh**: Config-Lade-Logik komplett überarbeitet
+  - `find_config_file()` - Sucht Config mit Fallback-Mechanismus
+  - Warnung bei Verwendung alter Config-Location (deprecated)
+  - Info-Meldung im Log über verwendete Config-Datei
+- **README.md**: Dokumentation aktualisiert für neue Config-Location
+  - Installation-Sektion aktualisiert
+  - Neue Config-Pfade dokumentiert
+  - Hinweis auf automatische Migration
+
+### Vorteile
+- ✅ **Für User**: Config bleibt bei Script-Updates erhalten
+- ✅ **Standard-konform**: XDG Base Directory Specification
+- ✅ **Backwards-kompatibel**: Keine Breaking Changes, automatische Migration
+- ✅ **Multi-User**: Jeder User kann eigene Config haben
+- ✅ **Zukunftssicher**: Vorbereitung für v2.0.0 (weitere XDG-Konformität)
+
+### Deprecation Notice
+- **Alte Config-Location** `./config.conf` ist deprecated
+  - Funktioniert weiterhin (Fallback-Mechanismus)
+  - Wird automatisch migriert beim ersten Start
+  - Wird in v2.0.0 entfernt (Migration dann obligatorisch)
+
+### Community
+- Feature basierend auf Community-Feedback (@tbreswald)
+- Linux-Standard-konform wie gewünscht
+
 ## [1.5.1] - 2025-12-27
 
 ### Hinzugefügt

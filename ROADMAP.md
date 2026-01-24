@@ -258,7 +258,7 @@ sudo apt-get install dma
 
 ### 📁 XDG Base Directory Specification (Priority)
 
-**Status:** 📋 Geplant
+**Status:** ✅ Implementiert (2026-01-24)
 
 **Motivation:**
 Community-Feedback (@tbreswald): Config-Dateien sollten Linux-Standard-konform in `~/.config/` liegen, nicht im Script-Ordner.
@@ -708,7 +708,7 @@ Features werden priorisiert nach:
 
 - **v1.5.0** ✅ - Upgrade-Check System & Kernel-Schutz (Released: 2025-12-27)
 - **v1.5.1** ✅ - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
-- **v1.6.0** 📋 - **XDG-Konformität & Config-Migration** (Auto-Migration nach ~/.config/)
+- **v1.6.0** ✅ - **XDG-Konformität & Config-Migration** (Implementiert: 2026-01-24)
 - **v1.7.0** 📋 - Hooks & Automation (Pre/Post-Update Hooks)
 - **v1.8.0** 📋 - Backup-Integration & Optimierungen
 - **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
@@ -727,4 +727,4 @@ Features werden priorisiert nach:
 - 🏗️ Migration-Script für User
 - 🏗️ 6 Monate Support für v1.x
 
-Letzte Aktualisierung: 2025-12-27
+Letzte Aktualisierung: 2026-01-24

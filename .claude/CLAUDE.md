@@ -4,14 +4,15 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.5.1 - Desktop-Benachrichtigungen & DMA
+v1.6.0 - XDG-Konformität & Config-Migration (in Entwicklung)
 
 ## Vorherige Versionen
+- v1.5.1 - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
 - v1.5.0 - Upgrade-Check System (Released: 2025-12-27)
 - v1.4.0 - ShellCheck-Warnungen behoben, Kernel-Schutz implementiert
 
 ## Nächste Version
-v1.6.0 - Weitere Desktop-Notification-Verbesserungen (geplant)
+v1.7.0 - Hooks & Automation (geplant)
 
 ## Projekt-Struktur
 ```
@@ -177,15 +178,50 @@ Update-Script/
 ## Roadmap - Geplante Versionen
 
 ### v1.6.0 - XDG-Konformität & Config-Migration
-**Status:** 📋 Geplant
+**Status:** ✅ In Entwicklung (2026-01-24)
 
-**Fokus:**
-- **XDG Base Directory Specification** (Priority)
-  - Config-Migration nach `~/.config/linux-update-script/`
-  - Automatische Migration von alter Config
-  - Backwards-kompatibel (keine Breaking Changes)
-  - Community-Feedback: @tbreswald
-- Erweiterte Desktop-Notifications (optionale Erweiterungen)
+**Implementierte Features:**
+
+#### 1. XDG Base Directory Specification ✅
+- Neue Config-Location: `~/.config/linux-update-script/config.conf`
+- Respektiert `$XDG_CONFIG_HOME` Umgebungsvariable
+- Config bleibt bei Script-Updates (git pull) erhalten
+- Multi-User-fähig (jeder User eigene Config)
+- System-weite Config: `/etc/linux-update-script/config.conf`
+
+#### 2. Automatische Config-Migration ✅
+- `migrate_config()` - Automatische Migration beim ersten Start
+- Alte Config wird als `.migrated` Backup gesichert
+- Vollständig backwards-kompatibel
+- Keine manuellen Schritte nötig
+
+#### 3. Fallback-Mechanismus ✅
+- `find_config_file()` - Intelligente Config-Suche
+- Reihenfolge: XDG → System → Alt (deprecated)
+- Warnung bei Verwendung alter Location
+- Info-Logging über verwendete Config
+
+#### 4. install.sh Anpassungen ✅
+- Erstellt Config direkt in `~/.config/linux-update-script/`
+- Zeigt neuen Config-Pfad während Installation
+- Bietet Migration alter Config an (falls vorhanden)
+- `load_existing_config()` unterstützt alte und neue Location
+
+#### 5. Mehrsprachigkeit ✅
+- 8 neue Sprachmeldungen (DE/EN)
+- MSG_CONFIG_MIGRATE_* - Migrations-Meldungen
+- MSG_CONFIG_LOCATION - Info über verwendete Config
+- MSG_CONFIG_OLD_DEPRECATED - Deprecation-Warnung
+
+**Technische Details:**
+- ShellCheck-konform (0 Warnungen)
+- Keine Breaking Changes
+- Community-Feedback: @tbreswald implementiert
+
+**Deprecation Notice:**
+- Alte Config-Location `./config.conf` ist deprecated
+- Funktioniert weiterhin (Fallback)
+- Wird in v2.0.0 entfernt
 
 ### v1.7.0 - Hooks & Automation
 **Status:** 📋 Konzeptphase
@@ -238,11 +274,14 @@ Update-Script/
 Siehe ROADMAP.md für vollständige Details aller Versionen.
 
 ---
-Letzte Aktualisierung: 2025-12-27
-Aktuelle Version: v1.5.1 (Released)
-Nächste Versionen: v1.6.0 → v1.7.0 → v1.8.0 → v2.0.0
+Letzte Aktualisierung: 2026-01-24
+Aktuelle Version: v1.6.0 (In Entwicklung)
+Vorherige Version: v1.5.1 (Released: 2025-12-27)
+Nächste Versionen: v1.7.0 → v1.8.0 → v2.0.0
 
-## Nächste Schritte
-- Warten auf Community-Feedback zu v1.5.0 und v1.5.1
-- Bug-Reports und Feature-Requests bearbeiten
-- Testing auf verschiedenen Distributionen
+## Nächste Schritte (v1.6.0)
+- Testing der Config-Migration auf verschiedenen Systemen
+- Testing mit verschiedenen Distributionen
+- Community-Feedback zu XDG-Implementierung sammeln
+- README.md mit neuen Config-Pfaden aktualisieren
+- ROADMAP.md Status aktualisieren

@@ -301,6 +301,41 @@ Während der Installation (`./install.sh`) wirst du nach deiner bevorzugten Spra
 
 ## Konfiguration
 
+### Config-Datei Location (NEU in v1.6.0)
+
+**XDG-konform seit v1.6.0:**
+
+Die Konfigurationsdatei liegt jetzt standardmäßig in:
+
+```bash
+~/.config/linux-update-script/config.conf
+```
+
+**Vorteile:**
+- ✅ **Config bleibt erhalten** beim Script-Update (git pull)
+- ✅ **Linux-Standard-konform** (XDG Base Directory Specification)
+- ✅ **Multi-User-fähig** (jeder User eigene Config)
+- ✅ **Saubere Trennung** von Code und Konfiguration
+
+**Automatische Migration:**
+
+Beim ersten Start nach Update auf v1.6.0 wird die alte Config automatisch migriert:
+
+```bash
+sudo ./update.sh
+# [INFO] Migriere Konfiguration nach ~/.config/ (XDG-Standard)
+# [INFO] Konfiguration erfolgreich migriert nach: ~/.config/linux-update-script/config.conf
+# [INFO] Alte Konfiguration gesichert als: config.conf.migrated
+```
+
+**Config-Pfade (Fallback-Reihenfolge):**
+
+1. `~/.config/linux-update-script/config.conf` (bevorzugt)
+2. `/etc/linux-update-script/config.conf` (system-weit)
+3. `./config.conf` (deprecated, wird in v2.0.0 entfernt)
+
+### Config-Optionen
+
 Die Konfigurationsdatei `config.conf` enthält folgende Optionen:
 
 ```bash
@@ -346,15 +381,25 @@ NOTIFICATION_TIMEOUT=5000
 
 ### Konfiguration ändern
 
-Option 1: Installations-Script erneut ausführen
+**Option 1: Installations-Script erneut ausführen**
 ```bash
 ./install.sh
 ```
 
-Option 2: Config-Datei manuell bearbeiten
+**Option 2: Config-Datei manuell bearbeiten**
+
+Ab v1.6.0 (XDG-konform):
 ```bash
+nano ~/.config/linux-update-script/config.conf
+```
+
+Vor v1.6.0 (deprecated):
+```bash
+cd ~/linux-update-script
 nano config.conf
 ```
+
+**Hinweis:** Nach Bearbeitung der Config ist kein Neustart nötig - die Änderungen werden beim nächsten Script-Lauf übernommen.
 
 ## E-Mail-Benachrichtigung
 

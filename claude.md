@@ -169,7 +169,27 @@ Für die Verwendung:
 
 ## Version
 
-### 1.4.0 (in Entwicklung - Feature-Branch)
+### 1.6.0 (in Entwicklung - XDG-Konformität)
+**Neues Hauptfeature: XDG Base Directory Specification**
+- Config-Migration nach `~/.config/linux-update-script/`
+- Automatische Migration von alter Config
+- Backwards-kompatibel (keine Breaking Changes)
+- Config bleibt bei Script-Updates erhalten
+
+**Technische Umsetzung:**
+- `migrate_config()` - Automatische Migration beim Start
+- `find_config_file()` - Intelligente Config-Suche mit Fallback
+- Neue Config-Pfade: XDG → System → Alt
+- 8 neue Sprachmeldungen (DE/EN)
+- install.sh erstellt Config in `~/.config/`
+- Warnung bei alter Config-Location (deprecated)
+
+**Community-Aspekt:**
+- Basierend auf Feedback von @tbreswald
+- Linux-Standard-konform
+- Vorbereitung für v2.0.0
+
+### 1.4.0 (Released - Feature-Branch)
 **Neues Hauptfeature: Mehrsprachigkeit (i18n)**
 - Vollständige Internationalisierung des Scripts
 - Deutsch und Englisch als Start-Sprachen

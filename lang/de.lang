@@ -118,6 +118,16 @@ NOTIFICATION_UPGRADE_AVAILABLE_BODY="Neue Version verfügbar. Mit --upgrade inst
 NOTIFICATION_REBOOT_REQUIRED="Neustart erforderlich"
 NOTIFICATION_REBOOT_REQUIRED_BODY="System benötigt Neustart nach Updates"
 
+# Config-Migration (XDG)
+MSG_CONFIG_MIGRATE_START="Migriere Konfiguration nach ~/.config/ (XDG-Standard)"
+MSG_CONFIG_MIGRATE_SUCCESS="Konfiguration erfolgreich migriert nach: %s"
+MSG_CONFIG_MIGRATE_BACKUP="Alte Konfiguration gesichert als: %s"
+MSG_CONFIG_MIGRATE_FAILED="Fehler bei Config-Migration: %s"
+MSG_CONFIG_OLD_LOCATION="HINWEIS: Konfiguration im alten Pfad gefunden"
+MSG_CONFIG_OLD_DEPRECATED="Der alte Config-Pfad ist veraltet und wird in v2.0.0 entfernt"
+MSG_CONFIG_LOCATION="Verwende Konfiguration von: %s"
+MSG_CONFIG_NOT_FOUND="Keine Konfiguration gefunden. Bitte install.sh ausführen."
+
 # Sprachinfo
 LANGUAGE_NAME="Deutsch"
 LANGUAGE_CODE="de"

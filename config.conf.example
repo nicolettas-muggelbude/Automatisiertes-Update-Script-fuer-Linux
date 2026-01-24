@@ -1,6 +1,14 @@
-# Update-Script Konfiguration
-# Kopiere diese Datei nach config.conf und passe die Werte an
-# cp config.conf.example config.conf
+# Update-Script Konfiguration - Beispieldatei
+#
+# Installation:
+# Option 1 (Empfohlen): ./install.sh ausführen (erstellt Config automatisch)
+# Option 2 (Manuell): Diese Datei kopieren und anpassen
+#
+# Config-Location (seit v1.6.0 - XDG-konform):
+# ~/.config/linux-update-script/config.conf
+#
+# Alte Location (deprecated, wird in v2.0.0 entfernt):
+# ~/linux-update-script/config.conf
 
 # Sprache / Language (auto|de|en|fr|es)
 # 'auto' = Automatische Erkennung aus System-Locale / Automatic detection from system locale

@@ -15,7 +15,13 @@ NC='\033[0m' # No Color
 
 # Konfigurationsdatei laden
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/config.conf"
+
+# XDG-konforme Config-Pfade
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+XDG_CONFIG_DIR="${XDG_CONFIG_HOME}/linux-update-script"
+XDG_CONFIG_FILE="${XDG_CONFIG_DIR}/config.conf"
+SYSTEM_CONFIG_FILE="/etc/linux-update-script/config.conf"
+OLD_CONFIG_FILE="${SCRIPT_DIR}/config.conf"
 
 # Standard-Konfiguration
 ENABLE_EMAIL=false
@@ -31,8 +37,78 @@ UPGRADE_NOTIFY_EMAIL=true
 ENABLE_DESKTOP_NOTIFICATION=true
 NOTIFICATION_TIMEOUT=5000
 
+# Config-Migration Funktion (wird nach load_language aufgerufen)
+migrate_config() {
+    # Neue Location bereits vorhanden? → Migration nicht nötig
+    if [ -f "$XDG_CONFIG_FILE" ]; then
+        return 0
+    fi
+
+    # Alte Config vorhanden? → Migrieren
+    if [ -f "$OLD_CONFIG_FILE" ]; then
+        # Sprache muss bereits geladen sein für Meldungen
+        echo -e "${YELLOW}[${LABEL_INFO}]${NC} $MSG_CONFIG_MIGRATE_START"
+
+        # Verzeichnis erstellen
+        mkdir -p "$XDG_CONFIG_DIR" 2>/dev/null || {
+            # shellcheck disable=SC2059
+            echo -e "${RED}[${LABEL_ERROR}]${NC} $(printf "$MSG_CONFIG_MIGRATE_FAILED" "Kann Verzeichnis nicht erstellen")"
+            return 1
+        }
+
+        # Config kopieren
+        if cp "$OLD_CONFIG_FILE" "$XDG_CONFIG_FILE" 2>/dev/null; then
+            # shellcheck disable=SC2059
+            echo -e "${GREEN}[${LABEL_INFO}]${NC} $(printf "$MSG_CONFIG_MIGRATE_SUCCESS" "$XDG_CONFIG_FILE")"
+
+            # Alte Config umbenennen (als Backup)
+            # shellcheck disable=SC2059
+            mv "$OLD_CONFIG_FILE" "${OLD_CONFIG_FILE}.migrated" 2>/dev/null && \
+                echo -e "${GREEN}[${LABEL_INFO}]${NC} $(printf "$MSG_CONFIG_MIGRATE_BACKUP" "${OLD_CONFIG_FILE}.migrated")"
+
+            return 0
+        else
+            # shellcheck disable=SC2059
+            echo -e "${RED}[${LABEL_ERROR}]${NC} $(printf "$MSG_CONFIG_MIGRATE_FAILED" "Kann Config nicht kopieren")"
+            return 1
+        fi
+    fi
+
+    return 0
+}
+
+# Config-Datei finden (Fallback-Mechanismus)
+find_config_file() {
+    # 1. XDG-konform (bevorzugt)
+    if [ -f "$XDG_CONFIG_FILE" ]; then
+        CONFIG_FILE="$XDG_CONFIG_FILE"
+        return 0
+    fi
+
+    # 2. System-weit
+    if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        CONFIG_FILE="$SYSTEM_CONFIG_FILE"
+        return 0
+    fi
+
+    # 3. Alt (deprecated, nur für Backwards-Compatibility)
+    if [ -f "$OLD_CONFIG_FILE" ]; then
+        CONFIG_FILE="$OLD_CONFIG_FILE"
+        # Warnung wird später ausgegeben (nach load_language)
+        return 0
+    fi
+
+    # Keine Config gefunden
+    return 1
+}
+
+# Config-Datei suchen
+if ! find_config_file; then
+    CONFIG_FILE=""  # Keine Config gefunden, nur Defaults nutzen
+fi
+
 # Konfiguration laden, falls vorhanden
-if [ -f "$CONFIG_FILE" ]; then
+if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
     # shellcheck source=/dev/null
     source "$CONFIG_FILE"
 fi
@@ -69,6 +145,15 @@ load_language() {
 
 # Sprache initialisieren
 load_language
+
+# Config-Migration durchführen (falls nötig)
+migrate_config
+
+# Warnung bei alter Config-Location
+if [ "$CONFIG_FILE" = "$OLD_CONFIG_FILE" ] && [ -f "$OLD_CONFIG_FILE" ]; then
+    echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_OLD_LOCATION"
+    echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_OLD_DEPRECATED"
+fi
 
 # Timestamp für Logdatei
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -697,6 +782,12 @@ log_info "$MSG_KERNEL: $(uname -r)"
 
 # Root-Rechte prüfen
 check_root
+
+# Info über verwendete Config-Datei (nur im Log)
+if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
+    # shellcheck disable=SC2059
+    log "$(printf "$MSG_CONFIG_LOCATION" "$CONFIG_FILE")"
+fi
 
 # Distribution erkennen
 detect_distro

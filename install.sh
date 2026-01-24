@@ -15,7 +15,12 @@ NC='\033[0m' # No Color
 
 # Script-Verzeichnis
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_FILE="${SCRIPT_DIR}/config.conf"
+
+# XDG-konforme Config-Pfade (v1.6.0+)
+XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+CONFIG_DIR="${XDG_CONFIG_HOME}/linux-update-script"
+CONFIG_FILE="${CONFIG_DIR}/config.conf"
+OLD_CONFIG_FILE="${SCRIPT_DIR}/config.conf"
 UPDATE_SCRIPT="${SCRIPT_DIR}/update.sh"
 
 # Sprache auswählen und laden
@@ -134,12 +139,22 @@ ask_input() {
 
 # Konfiguration laden (falls vorhanden)
 load_existing_config() {
+    # Neue XDG-Location prüfen
     if [ -f "$CONFIG_FILE" ]; then
         print_info "$INSTALL_CONFIG_EXISTS"
         # shellcheck source=/dev/null
         source "$CONFIG_FILE"
         return 0
     fi
+
+    # Alte Location als Fallback (wird später migriert)
+    if [ -f "$OLD_CONFIG_FILE" ]; then
+        print_info "$INSTALL_CONFIG_EXISTS (alte Location)"
+        # shellcheck source=/dev/null
+        source "$OLD_CONFIG_FILE"
+        return 0
+    fi
+
     return 1
 }
 
@@ -147,6 +162,10 @@ load_existing_config() {
 create_config() {
     print_header
     echo -e "${GREEN}Konfiguration wird erstellt...${NC}\n"
+
+    # Info über Config-Location (XDG-konform seit v1.6.0)
+    print_info "Konfigurations-Pfad: $CONFIG_FILE"
+    echo
 
     # Standard-Werte
     local enable_email="false"
@@ -228,6 +247,32 @@ create_config() {
     if ask_yes_no "Möchtest du das Log-Verzeichnis ändern?" "n"; then
         log_dir=$(ask_input "Neues Log-Verzeichnis" "$log_dir")
         print_info "Log-Verzeichnis geändert auf: $log_dir"
+    fi
+
+    # Config-Verzeichnis erstellen (XDG-konform)
+    if [ ! -d "$CONFIG_DIR" ]; then
+        mkdir -p "$CONFIG_DIR" 2>/dev/null || {
+            print_error "Kann Config-Verzeichnis nicht erstellen: $CONFIG_DIR"
+            exit 1
+        }
+    fi
+
+    # Alte Config migrieren (falls vorhanden)
+    if [ -f "$OLD_CONFIG_FILE" ] && [ ! -f "$CONFIG_FILE" ]; then
+        echo
+        print_info "Alte Konfiguration gefunden: $OLD_CONFIG_FILE"
+        if ask_yes_no "Soll die alte Konfiguration migriert werden?" "y"; then
+            if cp "$OLD_CONFIG_FILE" "$CONFIG_FILE" 2>/dev/null; then
+                print_info "Konfiguration erfolgreich migriert nach: $CONFIG_FILE"
+                mv "$OLD_CONFIG_FILE" "${OLD_CONFIG_FILE}.migrated" 2>/dev/null && \
+                    print_info "Alte Konfiguration gesichert als: ${OLD_CONFIG_FILE}.migrated"
+                echo
+                print_info "Installation abgeschlossen - bestehende Konfiguration wurde übernommen"
+                return 0
+            else
+                print_error "Fehler beim Migrieren der Konfiguration"
+            fi
+        fi
     fi
 
     # Konfigurationsdatei schreiben

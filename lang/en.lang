@@ -118,6 +118,16 @@ NOTIFICATION_UPGRADE_AVAILABLE_BODY="New version available. Install with --upgra
 NOTIFICATION_REBOOT_REQUIRED="Reboot Required"
 NOTIFICATION_REBOOT_REQUIRED_BODY="System requires reboot after updates"
 
+# Config Migration (XDG)
+MSG_CONFIG_MIGRATE_START="Migrating configuration to ~/.config/ (XDG standard)"
+MSG_CONFIG_MIGRATE_SUCCESS="Configuration successfully migrated to: %s"
+MSG_CONFIG_MIGRATE_BACKUP="Old configuration backed up as: %s"
+MSG_CONFIG_MIGRATE_FAILED="Error during config migration: %s"
+MSG_CONFIG_OLD_LOCATION="NOTE: Configuration found in old path"
+MSG_CONFIG_OLD_DEPRECATED="The old config path is deprecated and will be removed in v2.0.0"
+MSG_CONFIG_LOCATION="Using configuration from: %s"
+MSG_CONFIG_NOT_FOUND="No configuration found. Please run install.sh."
+
 # Language Info
 LANGUAGE_NAME="English"
 LANGUAGE_CODE="en"
