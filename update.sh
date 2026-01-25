@@ -255,6 +255,19 @@ log_warning() {
 
 # Distribution erkennen
 detect_distro() {
+    # Spezialfall: MX-Linux hat ID=debian in os-release, aber DISTRIB_ID=MX in lsb-release
+    if [ -f /etc/lsb-release ]; then
+        # shellcheck source=/dev/null
+        . /etc/lsb-release
+        if [ "$DISTRIB_ID" = "MX" ] || echo "$DISTRIB_ID" | grep -qi "^mx"; then
+            DISTRO="mx"
+            VERSION="${DISTRIB_RELEASE:-unknown}"
+            log_info "MX-Linux erkannt (via lsb-release): $DISTRIB_DESCRIPTION"
+            return 0
+        fi
+    fi
+
+    # Standard: os-release
     if [ -f /etc/os-release ]; then
         # shellcheck source=/dev/null
         . /etc/os-release
@@ -414,7 +427,7 @@ get_pending_kernel_version() {
     local pending_kernel=""
 
     case "$distro" in
-        debian|ubuntu|linuxmint|pop|mx|mxlinux)
+        debian|ubuntu|linuxmint|pop|mx)
             # Prüfe verfügbare Kernel-Pakete
             if command -v apt-cache &> /dev/null; then
                 pending_kernel=$(apt-cache policy linux-image-generic 2>/dev/null | \
@@ -623,7 +636,7 @@ hold_kernel_update() {
     local unhold_cmd=""
 
     case "$distro" in
-        debian|ubuntu|linuxmint|pop|mx|mxlinux)
+        debian|ubuntu|linuxmint|pop|mx)
             unhold_cmd="sudo apt-mark unhold linux-image-generic linux-headers-generic"
 
             if apt-mark hold linux-image-generic linux-headers-generic 2>&1 | tee -a "$LOG_FILE"; then
@@ -1205,7 +1218,7 @@ check_upgrade_available() {
             check_upgrade_mint
             return $?
             ;;
-        debian|ubuntu|mx|mxlinux)
+        debian|ubuntu|mx)
             check_upgrade_debian
             return $?
             ;;
@@ -1292,7 +1305,7 @@ perform_upgrade() {
                 return 1
             fi
             ;;
-        debian|ubuntu|mx|mxlinux)
+        debian|ubuntu|mx)
             # MX-Linux hat kein do-release-upgrade
             if echo "$DISTRO" | grep -qi "mx"; then
                 log_error "MX-Linux: Keine automatischen Distribution-Upgrades verfügbar"
@@ -1592,7 +1605,7 @@ check_reboot_required() {
     current_kernel=$(uname -r)
 
     case "$DISTRO" in
-        debian|ubuntu|linuxmint|mint|mx|mxlinux)
+        debian|ubuntu|linuxmint|mint|mx)
             installed_kernel=$(dpkg -l | grep "^ii.*linux-image-[0-9]" | awk '{print $2}' | sort -V | tail -1 | sed 's/linux-image-//')
             if [ -n "$installed_kernel" ] && [ "$installed_kernel" != "$current_kernel" ]; then
                 reboot_needed=true
@@ -1747,7 +1760,7 @@ fi
 UPDATE_SUCCESS=false
 
 case "$DISTRO" in
-    debian|ubuntu|linuxmint|mint|mx|mxlinux)
+    debian|ubuntu|linuxmint|mint|mx)
         update_debian && UPDATE_SUCCESS=true
         ;;
     rhel|centos|fedora|rocky|almalinux)

@@ -247,7 +247,7 @@ create_config() {
                 # shellcheck source=/dev/null
                 . /etc/os-release
                 case "$ID" in
-                    debian|ubuntu|linuxmint|pop|mx|mxlinux)
+                    debian|ubuntu|linuxmint|pop|mx)
                         echo "Installation für $PRETTY_NAME:"
                         echo "  sudo apt-get install mailutils"
                         echo
@@ -339,7 +339,7 @@ create_config() {
                 # shellcheck source=/dev/null
                 . /etc/os-release
                 case "$ID" in
-                    debian|ubuntu|linuxmint|pop|mx|mxlinux)
+                    debian|ubuntu|linuxmint|pop|mx)
                         if ! command -v dma &> /dev/null; then
                             if ask_yes_no "Möchtest du DMA (empfohlen) jetzt installieren?" "y"; then
                                 if sudo apt-get install -y dma 2>/dev/null; then
@@ -416,7 +416,7 @@ create_config() {
                 # shellcheck source=/dev/null
                 . /etc/os-release
                 case "$ID" in
-                    debian|ubuntu|linuxmint|pop|mx|mxlinux)
+                    debian|ubuntu|linuxmint|pop|mx)
                         echo "  sudo apt-get install libnotify-bin"
                         echo
                         if ask_yes_no "$INSTALL_DESKTOP_INSTALL_NOW" "y"; then
