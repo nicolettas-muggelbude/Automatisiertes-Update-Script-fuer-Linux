@@ -211,15 +211,20 @@ create_config() {
             fi
         done
 
-        # Mail-Programm prüfen
+        # Mail-Programm prüfen (mail-Befehl wird für Tests benötigt)
         echo
-        if ! command -v mail &> /dev/null && ! command -v sendmail &> /dev/null; then
+        if ! command -v mail &> /dev/null; then
             echo
-            print_warning "Kein Mail-Programm gefunden (mail/sendmail)"
+            print_warning "mail-Befehl nicht gefunden"
             echo
-            echo "Für E-Mail-Benachrichtigungen wird ein Mail-Client benötigt (mail oder mailx)."
-            echo "Empfohlen: mailutils (einfach zu installieren)"
+            echo "Für E-Mail-Tests und -Benachrichtigungen wird der 'mail'-Befehl benötigt."
+            echo "Empfohlen: mailutils (liefert den mail-Befehl)"
             echo
+            if command -v sendmail &> /dev/null; then
+                echo "Hinweis: sendmail ist bereits installiert (z.B. durch DMA),"
+                echo "aber mailutils wird trotzdem für den 'mail'-Befehl benötigt."
+                echo
+            fi
 
             # Distribution erkennen und Installation anbieten
             if [ -f /etc/os-release ]; then
