@@ -1244,15 +1244,32 @@ perform_upgrade() {
                 return 1
             fi
 
-            # Dry-Run: Prüfe Abhängigkeiten und Konflikte
+            # Schritt 1: Check - Prüfe ob Upgrade verfügbar
+            log_info "$MSG_UPGRADE_CHECK_AVAILABLE"
+            local check_result
+            check_result=$(do-release-upgrade -c 2>&1 || echo "")
+
+            if ! echo "$check_result" | grep -qi "new release\|upgrade"; then
+                log_error "$MSG_UPGRADE_NOT_AVAILABLE"
+                return 1
+            fi
+            log_info "$MSG_UPGRADE_AVAILABLE_CONFIRMED"
+
+            # Schritt 2: Dry-Run - Simuliere Upgrade (Abhängigkeiten prüfen)
             log_info "$MSG_UPGRADE_DRY_RUN_START"
-            if ! do-release-upgrade -c 2>&1 | tee -a "$LOG_FILE" | grep -qi "new release\|upgrade"; then
-                log_warning "$MSG_UPGRADE_DRY_RUN_FAILED"
+            if ! do-release-upgrade -c -f DistUpgradeViewNonInteractive 2>&1 | tee -a "$LOG_FILE"; then
+                log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
+                echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
+                read -r response
+                if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                    log_info "$MSG_UPGRADE_CANCELLED"
+                    return 1
+                fi
             else
                 log_info "$MSG_UPGRADE_DRY_RUN_OK"
             fi
 
-            # Führe Upgrade durch
+            # Schritt 3: Führe Upgrade durch
             # shellcheck disable=SC2059
             printf "$MSG_UPGRADE_START\n" "neue Version" | tee -a "$LOG_FILE"
             if do-release-upgrade -f DistUpgradeViewNonInteractive 2>&1 | tee -a "$LOG_FILE"; then
@@ -1266,9 +1283,19 @@ perform_upgrade() {
         fedora)
             local new_version=$((VERSION + 1))
 
-            # Dry-Run: Prüfe Download ohne Installation
+            # Schritt 1: Check - Prüfe ob neue Version verfügbar
+            # shellcheck disable=SC2059
+            printf "$MSG_UPGRADE_CHECK_AVAILABLE\n" | tee -a "$LOG_FILE"
+            if ! dnf list --available --releasever="$new_version" fedora-release 2>&1 | grep -q "fedora-release"; then
+                # shellcheck disable=SC2059
+                printf "$MSG_UPGRADE_NOT_AVAILABLE\n" "Fedora $new_version" | tee -a "$LOG_FILE"
+                return 1
+            fi
+            log_info "$MSG_UPGRADE_AVAILABLE_CONFIRMED"
+
+            # Schritt 2: Dry-Run - Prüfe Abhängigkeiten und Konflikte
             log_info "$MSG_UPGRADE_DRY_RUN_START"
-            if ! dnf system-upgrade download --refresh --releasever="$new_version" --assumeno 2>&1 | tee -a "$LOG_FILE" | grep -qi "will be installed"; then
+            if ! dnf system-upgrade download --refresh --releasever="$new_version" --assumeno 2>&1 | tee -a "$LOG_FILE" | grep -qi "will be installed\|will be upgraded"; then
                 log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
                 echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
                 read -r response
@@ -1280,17 +1307,79 @@ perform_upgrade() {
                 log_info "$MSG_UPGRADE_DRY_RUN_OK"
             fi
 
-            # Führe Upgrade durch
+            # Schritt 3: Download - Lade Upgrade-Pakete herunter
             # shellcheck disable=SC2059
             printf "$MSG_UPGRADE_START\n" "Fedora $new_version" | tee -a "$LOG_FILE"
-            if dnf system-upgrade download -y --releasever="$new_version" 2>&1 | tee -a "$LOG_FILE" && \
-               dnf system-upgrade reboot 2>&1 | tee -a "$LOG_FILE"; then
+            log_info "$MSG_UPGRADE_DOWNLOADING"
+            if ! dnf system-upgrade download -y --releasever="$new_version" 2>&1 | tee -a "$LOG_FILE"; then
+                log_error "$MSG_UPGRADE_DOWNLOAD_ERROR"
+                return 1
+            fi
+
+            # Schritt 4: Reboot - Starte Upgrade-Prozess (erfolgt beim Neustart)
+            log_info "$MSG_UPGRADE_REBOOT_PENDING"
+            if dnf system-upgrade reboot 2>&1 | tee -a "$LOG_FILE"; then
                 log_info "$MSG_UPGRADE_SUCCESS"
                 return 0
             else
                 log_error "$MSG_UPGRADE_FAILED"
                 return 1
             fi
+            ;;
+        opensuse*|sles)
+            # openSUSE Leap: zypper dup (distribution upgrade)
+            if ! command -v zypper &> /dev/null; then
+                log_error "zypper nicht gefunden"
+                return 1
+            fi
+
+            # Schritt 1: Refresh - Aktualisiere Repositories
+            log_info "$MSG_UPGRADE_REFRESH_REPOS"
+            if ! zypper refresh 2>&1 | tee -a "$LOG_FILE"; then
+                log_error "$MSG_UPGRADE_REFRESH_FAILED"
+                return 1
+            fi
+
+            # Schritt 2: Dry-Run - Prüfe Abhängigkeiten und Konflikte
+            log_info "$MSG_UPGRADE_DRY_RUN_START"
+            if ! zypper dup --dry-run --no-confirm 2>&1 | tee -a "$LOG_FILE"; then
+                log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
+                echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
+                read -r response
+                if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                    log_info "$MSG_UPGRADE_CANCELLED"
+                    return 1
+                fi
+            else
+                log_info "$MSG_UPGRADE_DRY_RUN_OK"
+            fi
+
+            # Schritt 3: Führe Distribution-Upgrade durch
+            # shellcheck disable=SC2059
+            printf "$MSG_UPGRADE_START\n" "neue openSUSE Version" | tee -a "$LOG_FILE"
+            log_info "$MSG_UPGRADE_PERFORMING"
+            if zypper dup --no-confirm 2>&1 | tee -a "$LOG_FILE"; then
+                log_info "$MSG_UPGRADE_SUCCESS"
+                return 0
+            else
+                log_error "$MSG_UPGRADE_FAILED"
+                return 1
+            fi
+            ;;
+        arch|manjaro|endeavouros|garuda|arcolinux)
+            # Arch Linux: Rolling Release - Upgrade = reguläres Update
+            log_info "Arch-basierte Distributionen verwenden Rolling Release"
+            log_info "Ein vollständiges System-Update entspricht einem Upgrade"
+            log_warning "$MSG_UPGRADE_NOT_SUPPORTED"
+            log_info "Verwende: sudo $0 (reguläres Update)"
+            return 1
+            ;;
+        solus)
+            # Solus: Rolling Release
+            log_info "Solus verwendet Rolling Release"
+            log_warning "$MSG_UPGRADE_NOT_SUPPORTED"
+            log_info "Verwende: sudo $0 (reguläres Update)"
+            return 1
             ;;
         *)
             log_error "$MSG_UPGRADE_NOT_SUPPORTED"
