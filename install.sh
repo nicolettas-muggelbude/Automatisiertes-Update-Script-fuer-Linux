@@ -187,20 +187,27 @@ create_config() {
     fi
 
     # E-Mail-Benachrichtigung
-    if ask_yes_no "E-Mail-Benachrichtigung aktivieren?" "n"; then
+    echo "E-Mail-Benachrichtigungen bei erfolgreichen Updates, Fehlern und Upgrades."
+    echo
+    if ask_yes_no "E-Mail-Benachrichtigung aktivieren?" "y"; then
         enable_email="true"
         echo
 
         # E-Mail-Adresse abfragen
+        echo "Für lokale Benachrichtigungen: Gib deinen Benutzernamen ein (z.B. $(whoami))"
+        echo "Für externe E-Mails: Gib deine vollständige E-Mail-Adresse ein"
+        echo
         while true; do
-            email_recipient=$(ask_input "E-Mail-Adresse für Benachrichtigungen" "$email_recipient")
+            # Default: aktueller Username für lokale Mails
+            local default_recipient="${email_recipient:-$(whoami)}"
+            email_recipient=$(ask_input "E-Mail-Adresse oder Benutzername" "$default_recipient")
             if [ -n "$email_recipient" ]; then
                 echo
-                print_info "E-Mail-Adresse gespeichert: $email_recipient"
+                print_info "Benachrichtigungen gehen an: $email_recipient"
                 break
             else
                 echo
-                print_error "E-Mail-Adresse darf nicht leer sein"
+                print_error "Empfänger darf nicht leer sein"
             fi
         done
 
@@ -358,7 +365,11 @@ create_config() {
     fi
 
     # Automatischer Neustart
-    if ask_yes_no "Automatischen Neustart aktivieren (falls erforderlich)?" "n"; then
+    echo
+    echo "ACHTUNG: Automatischer Neustart startet dein System ohne Rückfrage neu!"
+    echo "Empfohlen: NEIN (du entscheidest selbst wann neu gestartet wird)"
+    echo
+    if ask_yes_no "Automatischen Neustart aktivieren?" "n"; then
         auto_reboot="true"
         print_warning "System wird automatisch neu gestartet, wenn Updates dies erfordern!"
     else
@@ -367,7 +378,8 @@ create_config() {
 
     # Desktop-Benachrichtigungen
     echo
-    echo "$INSTALL_DESKTOP_INFO"
+    echo "Desktop-Benachrichtigungen: Popup-Meldungen bei Updates, Fehlern und Upgrades."
+    echo
     if ask_yes_no "$INSTALL_DESKTOP_ENABLE" "y"; then
         # Prüfen ob notify-send installiert ist
         if ! command -v notify-send &> /dev/null; then
@@ -587,6 +599,9 @@ setup_cron() {
     print_header
     echo -e "${GREEN}Cron-Job Einrichtung${NC}\n"
 
+    echo "Cron-Jobs führen Updates automatisch zu festen Zeiten aus."
+    echo "Du kannst täglich, wöchentlich oder monatlich wählen."
+    echo
     if ! ask_yes_no "Möchtest du einen automatischen Cron-Job einrichten?" "y"; then
         print_info "Cron-Job-Einrichtung übersprungen"
         return
@@ -698,7 +713,9 @@ test_script() {
     print_header
     echo -e "${GREEN}Test-Durchlauf${NC}\n"
 
-    if ! ask_yes_no "Möchtest du einen Test-Durchlauf starten?" "n"; then
+    echo "Zeigt deine aktuelle Konfiguration an."
+    echo
+    if ! ask_yes_no "Möchtest du einen Test-Durchlauf starten?" "y"; then
         return
     fi
 
