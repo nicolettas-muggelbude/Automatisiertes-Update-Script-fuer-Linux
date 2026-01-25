@@ -1036,9 +1036,19 @@ $MSG_UPGRADE_BACKUP_WARNING"
 check_upgrade_mint() {
     log_info "$MSG_UPGRADE_CHECKING_MINT"
 
+    # Prüfe ob mintupgrade installiert ist
     if ! command -v mintupgrade &> /dev/null; then
-        log_warning "mintupgrade nicht gefunden"
-        return 1
+        log_warning "$MSG_UPGRADE_MINTUPGRADE_NOT_INSTALLED"
+        log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALLING"
+
+        if apt-get update 2>&1 | tee -a "$LOG_FILE" && \
+           apt-get install -y mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
+            log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALL_SUCCESS"
+        else
+            log_error "$MSG_UPGRADE_MINTUPGRADE_INSTALL_FAILED"
+            log_info "$MSG_UPGRADE_MINTUPGRADE_MANUAL"
+            return 1
+        fi
     fi
 
     # Prüfe auf neue Mint-Version
@@ -1174,8 +1184,17 @@ perform_upgrade() {
         linuxmint|mint)
             # Linux Mint: mintupgrade verwenden
             if ! command -v mintupgrade &> /dev/null; then
-                log_error "mintupgrade nicht gefunden"
-                return 1
+                log_warning "$MSG_UPGRADE_MINTUPGRADE_NOT_INSTALLED"
+                log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALLING"
+
+                if apt-get update 2>&1 | tee -a "$LOG_FILE" && \
+                   apt-get install -y mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
+                    log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALL_SUCCESS"
+                else
+                    log_error "$MSG_UPGRADE_MINTUPGRADE_INSTALL_FAILED"
+                    log_info "$MSG_UPGRADE_MINTUPGRADE_MANUAL"
+                    return 1
+                fi
             fi
 
             # Dry-Run: Prüfe Abhängigkeiten und Konflikte
