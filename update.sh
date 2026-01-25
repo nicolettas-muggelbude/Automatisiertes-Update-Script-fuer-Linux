@@ -117,7 +117,14 @@ load_config() {
         # shellcheck source=/dev/null
         source "$USER_CONFIG_FILE"
         user_config_loaded=true
-        CONFIG_OVERRIDE_SOURCE="User (~/.config/)"
+
+        # Wenn keine System-Config existiert, ist User-Config die Primäre
+        if [ "$system_config_loaded" = false ]; then
+            CONFIG_PRIMARY_SOURCE="User (~/.config/)"
+            CONFIG_OVERRIDE_SOURCE="Keine"
+        else
+            CONFIG_OVERRIDE_SOURCE="User (~/.config/)"
+        fi
     else
         CONFIG_OVERRIDE_SOURCE="Kein Override"
     fi
@@ -125,6 +132,8 @@ load_config() {
     # Debug-Info für Logging
     if [ "$system_config_loaded" = true ] && [ "$user_config_loaded" = true ]; then
         CONFIG_SOURCE="Hybrid (System + User Override)"
+    elif [ "$user_config_loaded" = true ]; then
+        CONFIG_SOURCE="User (~/.config/) - kein System-Default"
     elif [ "$system_config_loaded" = true ]; then
         CONFIG_SOURCE="$CONFIG_PRIMARY_SOURCE"
     else
@@ -193,12 +202,17 @@ if [ "$CONFIG_PRIMARY_SOURCE" = "Legacy (Script-Dir)" ] && [ -f "$OLD_CONFIG_FIL
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} Empfehlung: sudo cp $OLD_CONFIG_FILE /etc/linux-update-script/config.conf"
 fi
 
-# Warnung wenn KEINE Config gefunden wurde
+# Warnung/Info bei Config-Status
 if [ "$CONFIG_SOURCE" = "Defaults (keine Config)" ]; then
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_NOT_FOUND"
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} Verwende Standard-Konfiguration"
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} E-Mail- und Desktop-Benachrichtigungen sind möglicherweise nicht konfiguriert!"
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} Erstelle Config mit: ./install.sh"
+elif [ "$CONFIG_SOURCE" = "User (~/.config/) - kein System-Default" ]; then
+    echo -e "${YELLOW}[${LABEL_INFO}]${NC} User-Config wird verwendet: ~/.config/linux-update-script/config.conf"
+    echo -e "${YELLOW}[${LABEL_INFO}]${NC} HINWEIS: Für Cron-Jobs wird empfohlen auch eine System-Config anzulegen:"
+    echo -e "${YELLOW}[${LABEL_INFO}]${NC} sudo mkdir -p /etc/linux-update-script"
+    echo -e "${YELLOW}[${LABEL_INFO}]${NC} sudo cp ~/.config/linux-update-script/config.conf /etc/linux-update-script/"
 fi
 
 # Timestamp für Logdatei
