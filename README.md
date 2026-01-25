@@ -462,88 +462,324 @@ nano config.conf
 
 ## E-Mail-Benachrichtigung
 
-### Voraussetzungen
+### Übersicht: Lokal vs. Extern
 
-Für E-Mail-Benachrichtigungen benötigst du:
+Es gibt **zwei verschiedene Arten** von E-Mail-Benachrichtigungen:
 
-1. **Mail-Client** (mail oder mailx)
-2. **MTA (Mail Transfer Agent)**
+| Art | Empfänger | Verwendung | Konfigurationsaufwand |
+|-----|-----------|------------|----------------------|
+| **Lokal** | `nicole`, `root` | Mails bleiben auf dem System | ⭐ Minimal (empfohlen!) |
+| **Extern** | `user@gmail.com` | Mails gehen raus ins Internet | ⚙️ Aufwändig (SMTP nötig) |
 
-### Empfohlene MTA-Lösung: DMA (DragonFly Mail Agent)
+**Empfehlung für Einsteiger:** Start mit **lokalen Mails** - einfacher, funktioniert sofort!
 
-**DMA** ist die **einfachste und beste Lösung** für lokale E-Mail-Benachrichtigungen:
+---
+
+## 📬 Lokale E-Mail-Benachrichtigungen (Empfohlen)
+
+### Was sind lokale Mails?
+
+Lokale Mails werden **nicht ins Internet** verschickt, sondern landen direkt in deiner **Mailbox auf dem System**.
 
 ✅ **Vorteile:**
-- Keine Konfiguration nötig
-- Kein laufender Dienst
-- Kein offener Port (25)
-- Keine Queue im Hintergrund
-- Perfekt für lokale Mails (cron, mail)
+- Keine externe SMTP-Konfiguration nötig
 - Funktioniert sofort nach Installation
+- Perfekt für System-Benachrichtigungen
+- Keine Spam-Probleme
+- Keine Internet-Verbindung erforderlich
 
-**Debian/Ubuntu/Mint:**
+### Schritt 1: Installation (automatisch via install.sh)
+
 ```bash
-# DMA installieren (EMPFOHLEN)
-sudo apt-get install dma
+./install.sh
 
-# Das war's! DMA funktioniert sofort für lokale Mails
+# Bei der Frage:
+E-Mail-Adresse oder Benutzername [nicole]: nicole ← Einfach Username!
 ```
 
-### Alternative MTAs
+Das installiert automatisch:
+- ✅ **mailutils** (liefert den `mail`-Befehl)
+- ✅ **DMA** (DragonFly Mail Agent - leichtgewichtiger MTA)
 
-Falls DMA nicht verfügbar oder spezielle Anforderungen bestehen:
+### Schritt 2: Lokale Mails lesen
 
-**ssmtp (einfach, für externe SMTP-Server):**
+**Option 1: mail-Kommando (empfohlen)**
+
 ```bash
+# Mailbox öffnen
+mail
+
+# Ausgabe:
+# Mail version 8.1.2 01/15/2001.  Type ? for help.
+# "/var/mail/nicole": 3 messages 2 new
+# >N  1 nicole@hostname  Sat Jan 25 10:30  23/699   Linux Update-Script - Test
+#  N  2 nicole@hostname  Sat Jan 25 11:15  18/543   System-Update erfolgreich
+#    3 nicole@hostname  Sat Jan 25 12:00  21/612   System-Update FEHLGESCHLAGEN
+```
+
+**Wichtige Befehle im mail-Programm:**
+
+```bash
+# Erste Mail lesen
+& 1
+
+# Nächste Mail
+& n
+
+# Mail löschen
+& d 1
+
+# Mehrere Mails löschen
+& d 1-5
+
+# Alle Mails löschen
+& d *
+
+# Beenden
+& q
+```
+
+**Option 2: Direkt in Mailbox-Datei schauen**
+
+```bash
+# Mailbox anzeigen
+cat /var/mail/nicole
+
+# Oder mit Pager (scrollbar)
+less /var/mail/nicole
+
+# Neueste Mails anzeigen
+tail -50 /var/mail/nicole
+```
+
+**Option 3: Mailbox komplett leeren**
+
+```bash
+# Alle Mails löschen
+> /var/mail/nicole
+
+# ODER
+sudo rm /var/mail/nicole
+```
+
+### Schritt 3: Test-Mail senden
+
+```bash
+# Einfache Test-Mail
+echo "Dies ist ein Test" | mail -s "Test-Betreff" nicole
+
+# Mit mehrzeiligem Text
+mail -s "Mehrzeiliger Test" nicole << EOF
+Zeile 1
+Zeile 2
+Zeile 3
+EOF
+
+# Mail lesen
+mail
+```
+
+### Troubleshooting: Lokale Mails
+
+**Problem: Mails kommen nicht an**
+
+```bash
+# 1. Prüfe ob mailutils installiert ist
+command -v mail && echo "✓ mail vorhanden" || echo "✗ mail fehlt"
+
+# 2. Prüfe ob DMA installiert ist
+dpkg -l | grep dma
+
+# 3. DMA-Queue prüfen (wartende Mails)
+sudo mailq
+
+# 4. DMA-Logs prüfen
+sudo journalctl -u dma -n 50
+```
+
+**Problem: Bounce-Mails (Zustellfehler)**
+
+Wenn du versehentlich externe Adressen verwendet hast:
+
+```bash
+# Queue leeren (alle wartenden Mails löschen)
+sudo rm -rf /var/spool/dma/*
+
+# Bounces aus Mailbox löschen
+mail
+& d *  # Alle löschen
+& q
+
+# Config korrigieren
+nano ~/.config/linux-update-script/config.conf
+# EMAIL_RECIPIENT="nicole"  ← Lokaler Username!
+```
+
+---
+
+## 🌐 Externe E-Mail-Benachrichtigungen (Fortgeschritten)
+
+Falls du Mails an **externe Adressen** (Gmail, Outlook, etc.) senden möchtest.
+
+⚠️ **Warnung:** Deutlich komplexer! Nur wenn du wirklich externe Mails brauchst.
+
+### Voraussetzungen
+
+1. **Gültiger SMTP-Server** (Gmail, Posteo, dein Provider)
+2. **App-Passwort** (bei Gmail, Outlook) NICHT dein normales Passwort!
+3. **SMTP-Zugangsdaten** (Server, Port, Username, Passwort)
+
+### Option 1: DMA mit SMTP (für Fortgeschrittene)
+
+```bash
+# 1. DMA-Config bearbeiten
+sudo nano /etc/dma/dma.conf
+```
+
+Für **Gmail** beispielsweise:
+
+```bash
+# SMTP-Server
+SMARTHOST smtp.gmail.com
+PORT 587
+
+# Authentifizierung
+AUTHPATH /etc/dma/auth.conf
+SECURETRANSFER
+STARTTLS
+
+# Absender-Domain
+MAILNAME gmail.com
+```
+
+```bash
+# 2. Zugangsdaten speichern
+sudo nano /etc/dma/auth.conf
+```
+
+Inhalt:
+```
+deine@gmail.com|smtp.gmail.com:dein-app-passwort
+```
+
+```bash
+# 3. Berechtigungen setzen
+sudo chmod 640 /etc/dma/auth.conf
+sudo chown root:mail /etc/dma/auth.conf
+
+# 4. Mailname setzen
+echo "gmail.com" | sudo tee /etc/mailname
+```
+
+**Gmail App-Passwort erstellen:**
+1. Google Account → Sicherheit
+2. 2-Faktor-Authentifizierung aktivieren
+3. App-Passwörter → Neues Passwort generieren
+4. Passwort in `/etc/dma/auth.conf` eintragen
+
+### Option 2: ssmtp mit SMTP (Alternative)
+
+```bash
+# 1. ssmtp installieren
 sudo apt-get install ssmtp
-# Konfiguration in /etc/ssmtp/ssmtp.conf erforderlich
+
+# 2. Konfiguration
+sudo nano /etc/ssmtp/ssmtp.conf
 ```
 
-**postfix (vollwertiger MTA):**
+Für **Gmail**:
 ```bash
-sudo apt-get install postfix
-# Während Installation: "Internet Site" wählen
+root=deine@gmail.com
+mailhub=smtp.gmail.com:587
+AuthUser=deine@gmail.com
+AuthPass=dein-app-passwort
+UseTLS=YES
+UseSTARTTLS=YES
+FromLineOverride=YES
 ```
 
-**RHEL/Fedora/CentOS:**
-```bash
-# Mail-Client installieren
-sudo dnf install mailx
-
-# Einfacher MTA
-sudo dnf install ssmtp
-
-# ODER vollwertiger MTA
-sudo dnf install postfix
-```
-
-**openSUSE/SUSE:**
-```bash
-sudo zypper install mailx
-sudo zypper install postfix
-```
-
-**Arch Linux/Manjaro:**
-```bash
-# Mail-Client installieren
-sudo pacman -S mailutils
-
-# Einfacher MTA
-sudo pacman -S ssmtp
-
-# ODER vollwertiger MTA
-sudo pacman -S postfix
-```
-
-### E-Mail-Konfiguration testen
+### Externe Mails testen
 
 ```bash
-echo "Test-Nachricht" | mail -s "Test" deine-admin@domain.de
+# Test-Mail an externe Adresse
+echo "Test von $(hostname)" | mail -s "Externer Test" deine@gmail.com
+
+# Queue prüfen (falls Mail wartet)
+sudo mailq
+
+# Logs prüfen
+sudo tail -f /var/log/mail.log
 ```
 
-**Wichtig:** Wenn du die Fehlermeldung "Cannot start /usr/sbin/sendmail" siehst, ist kein MTA installiert oder konfiguriert. Das Script wird dich dann warnen:
+### Troubleshooting: Externe Mails
+
+**Problem: "Invalid HELO" oder "550 Rejected"**
+
+```bash
+# MAILNAME muss gültige Domain sein!
+sudo nano /etc/dma/dma.conf
+# MAILNAME gmail.com  ← NICHT "hostname.localdomain"!
+
+echo "gmail.com" | sudo tee /etc/mailname
 ```
-[WARNUNG] E-Mail konnte nicht gesendet werden (MTA nicht konfiguriert?)
+
+**Problem: "Authentication failed"**
+
+```bash
+# Prüfe App-Passwort (NICHT normales Passwort!)
+sudo cat /etc/dma/auth.conf
+
+# Format muss sein:
+# user@gmail.com|smtp.gmail.com:16-stelliges-app-passwort
+```
+
+**Problem: Mails bleiben in Queue**
+
+```bash
+# Queue anzeigen
+sudo mailq
+
+# Queue manuell abarbeiten (DMA)
+sudo dma -q
+
+# Oder Queue komplett leeren (ACHTUNG: löscht alle wartenden Mails!)
+sudo rm -rf /var/spool/dma/*
+```
+
+---
+
+## 📋 Zusammenfassung: Was soll ich nutzen?
+
+### Für normale Heimanwender:
+```
+✅ Lokale Mails (nicole, root)
+✅ mailutils + DMA
+✅ Keine SMTP-Konfiguration nötig
+✅ Mails mit "mail" lesen
+```
+
+### Für Fortgeschrittene mit externen Mails:
+```
+⚙️ Externe Mails (user@gmail.com)
+⚙️ DMA oder ssmtp mit SMTP
+⚙️ App-Passwörter einrichten
+⚙️ MAILNAME konfigurieren
+```
+
+### Quick-Start für Einsteiger:
+
+```bash
+# 1. Installation
+./install.sh
+# Bei E-Mail: nicole eingeben
+
+# 2. Test-Mail senden
+echo "Test" | mail -s "Test" nicole
+
+# 3. Mails lesen
+mail
+
+# Fertig! ✓
 ```
 
 ## Desktop-Benachrichtigungen
