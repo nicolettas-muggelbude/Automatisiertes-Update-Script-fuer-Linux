@@ -83,26 +83,33 @@ migrate_config() {
 
 # Config-Datei finden (Fallback-Mechanismus)
 find_config_file() {
+    # Debug: Zeige welche Pfade geprüft werden (wird später ins Log geschrieben)
+    CONFIG_SEARCH_PATHS="XDG: $XDG_CONFIG_FILE | System: $SYSTEM_CONFIG_FILE | Alt: $OLD_CONFIG_FILE"
+
     # 1. XDG-konform (bevorzugt)
     if [ -f "$XDG_CONFIG_FILE" ]; then
         CONFIG_FILE="$XDG_CONFIG_FILE"
+        CONFIG_SOURCE="XDG"
         return 0
     fi
 
     # 2. System-weit
     if [ -f "$SYSTEM_CONFIG_FILE" ]; then
         CONFIG_FILE="$SYSTEM_CONFIG_FILE"
+        CONFIG_SOURCE="System"
         return 0
     fi
 
     # 3. Alt (deprecated, nur für Backwards-Compatibility)
     if [ -f "$OLD_CONFIG_FILE" ]; then
         CONFIG_FILE="$OLD_CONFIG_FILE"
+        CONFIG_SOURCE="Alt (deprecated)"
         # Warnung wird später ausgegeben (nach load_language)
         return 0
     fi
 
     # Keine Config gefunden
+    CONFIG_SOURCE="Keine"
     return 1
 }
 
@@ -1620,10 +1627,30 @@ log_info "$MSG_KERNEL: $(uname -r)"
 check_root
 
 # Info über verwendete Config-Datei (nur im Log)
+log "=== Config-Debugging ==="
+log "Config-Suche Pfade: $CONFIG_SEARCH_PATHS"
+log "Config-Quelle: $CONFIG_SOURCE"
+
 if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
     # shellcheck disable=SC2059
     log "$(printf "$MSG_CONFIG_LOCATION" "$CONFIG_FILE")"
+
+    # Debug: Log wichtige Config-Werte
+    log "Geladene Config-Werte:"
+    log "  AUTO_REBOOT='$AUTO_REBOOT' (Typ: $(type -t AUTO_REBOOT 2>/dev/null || echo 'undefined'))"
+    log "  ENABLE_EMAIL='$ENABLE_EMAIL'"
+    log "  ENABLE_DESKTOP_NOTIFICATION='$ENABLE_DESKTOP_NOTIFICATION'"
+    log "  KERNEL_PROTECTION='$KERNEL_PROTECTION'"
+
+    # Zeige rohen Wert aus Config-Datei
+    if grep -q "^AUTO_REBOOT=" "$CONFIG_FILE" 2>/dev/null; then
+        log "  AUTO_REBOOT in Config-Datei: $(grep "^AUTO_REBOOT=" "$CONFIG_FILE")"
+    fi
+else
+    log "WARNUNG: Keine Config-Datei gefunden, verwende Standard-Werte"
+    log "  AUTO_REBOOT=$AUTO_REBOOT (Standard)"
 fi
+log "=== Ende Config-Debugging ==="
 
 # Distribution erkennen
 detect_distro
