@@ -51,6 +51,7 @@ MSG_XBPS_FAILED="xbps-install -Su -y failed"
 
 # Reboot
 MSG_REBOOT_AUTO="Reboot required - will be performed automatically..."
+MSG_REBOOT_AUTO_COUNTDOWN="Reboot required - system will restart in 5 minutes..."
 MSG_REBOOT_MANUAL="Reboot required! Please restart the system."
 MSG_REBOOT_NOTIFICATION="The system will be restarted after the update."
 
@@ -100,7 +101,11 @@ MSG_UPGRADE_DRY_RUN="Dry-run mode: No changes will be made"
 MSG_UPGRADE_CHECKING_SOLUS="Checking Solus for new version"
 MSG_UPGRADE_CHECKING_ARCH="Checking Arch for important updates"
 MSG_UPGRADE_CHECKING_DEBIAN="Checking for new Debian/Ubuntu release"
+MSG_UPGRADE_CHECKING_MINT="Checking Linux Mint for new version"
 MSG_UPGRADE_CHECKING_FEDORA="Checking for new Fedora version"
+MSG_UPGRADE_DRY_RUN_START="Checking dependencies and conflicts (Dry-Run)"
+MSG_UPGRADE_DRY_RUN_OK="Dry-run successful: No conflicts found"
+MSG_UPGRADE_DRY_RUN_FAILED="Dry-run failed: Conflicts or issues found"
 MSG_UPGRADE_NOT_SUPPORTED="Upgrade check not yet implemented for this distribution"
 MSG_UPGRADE_DISABLED="Upgrade check disabled (ENABLE_UPGRADE_CHECK=false)"
 
@@ -117,6 +122,7 @@ NOTIFICATION_UPGRADE_AVAILABLE="Distribution Upgrade Available"
 NOTIFICATION_UPGRADE_AVAILABLE_BODY="New version available. Install with --upgrade"
 NOTIFICATION_REBOOT_REQUIRED="Reboot Required"
 NOTIFICATION_REBOOT_REQUIRED_BODY="System requires reboot after updates"
+NOTIFICATION_REBOOT_AUTO_BODY="System will automatically reboot in 5 minutes"
 
 # Config Migration (XDG)
 MSG_CONFIG_MIGRATE_START="Migrating configuration to ~/.config/ (XDG standard)"

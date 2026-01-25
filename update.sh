@@ -1032,6 +1032,51 @@ $MSG_UPGRADE_BACKUP_WARNING"
     return 0
 }
 
+# Linux Mint Upgrade-Check
+check_upgrade_mint() {
+    log_info "$MSG_UPGRADE_CHECKING_MINT"
+
+    if ! command -v mintupgrade &> /dev/null; then
+        log_warning "mintupgrade nicht gefunden"
+        return 1
+    fi
+
+    # Prüfe auf neue Mint-Version
+    local check_result
+    check_result=$(mintupgrade check 2>&1 || echo "")
+
+    if echo "$check_result" | grep -qi "upgrade.*available\|new.*version"; then
+        local new_version
+        new_version=$(echo "$check_result" | grep -i "version" | head -1 | grep -oP '\d+(\.\d+)*' | head -1)
+
+        if [ -n "$new_version" ]; then
+            # shellcheck disable=SC2059
+            printf "$MSG_UPGRADE_AVAILABLE\n" "Linux Mint $VERSION" "Linux Mint $new_version" | tee -a "$LOG_FILE"
+        else
+            log_info "Linux Mint Upgrade verfügbar (Version konnte nicht automatisch erkannt werden)"
+        fi
+
+        # E-Mail-Benachrichtigung
+        if [ "$UPGRADE_NOTIFY_EMAIL" = true ]; then
+            local email_body="$EMAIL_BODY_UPGRADE
+
+Aktuelle Version: Linux Mint $VERSION
+Neue Version: Linux Mint ${new_version:-unbekannt}
+
+Für Upgrade ausführen:
+sudo $0 --upgrade
+
+$MSG_UPGRADE_BACKUP_WARNING"
+            send_email "$EMAIL_SUBJECT_UPGRADE" "$email_body"
+        fi
+
+        return 3  # Upgrade verfügbar
+    fi
+
+    log_info "$MSG_UPGRADE_NO_UPGRADE"
+    return 0
+}
+
 # Fedora Upgrade-Check
 check_upgrade_fedora() {
     log_info "$MSG_UPGRADE_CHECKING_FEDORA"
@@ -1091,7 +1136,11 @@ check_upgrade_available() {
             check_upgrade_arch
             return $?
             ;;
-        debian|ubuntu|linuxmint|mint)
+        linuxmint|mint)
+            check_upgrade_mint
+            return $?
+            ;;
+        debian|ubuntu)
             check_upgrade_debian
             return $?
             ;;
@@ -1122,7 +1171,54 @@ perform_upgrade() {
 
     # Distributionsspezifisches Upgrade
     case "$DISTRO" in
-        debian|ubuntu|linuxmint|mint)
+        linuxmint|mint)
+            # Linux Mint: mintupgrade verwenden
+            if ! command -v mintupgrade &> /dev/null; then
+                log_error "mintupgrade nicht gefunden"
+                return 1
+            fi
+
+            # Dry-Run: Prüfe Abhängigkeiten und Konflikte
+            log_info "$MSG_UPGRADE_DRY_RUN_START"
+            if ! mintupgrade --dry-run 2>&1 | tee -a "$LOG_FILE"; then
+                log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
+                echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
+                read -r response
+                if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                    log_info "$MSG_UPGRADE_CANCELLED"
+                    return 1
+                fi
+            else
+                log_info "$MSG_UPGRADE_DRY_RUN_OK"
+            fi
+
+            # Führe Mint-Upgrade durch
+            # shellcheck disable=SC2059
+            printf "$MSG_UPGRADE_START\n" "neue Linux Mint Version" | tee -a "$LOG_FILE"
+            if mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
+                log_info "$MSG_UPGRADE_SUCCESS"
+                return 0
+            else
+                log_error "$MSG_UPGRADE_FAILED"
+                return 1
+            fi
+            ;;
+        debian|ubuntu)
+            # Debian/Ubuntu: do-release-upgrade verwenden
+            if ! command -v do-release-upgrade &> /dev/null; then
+                log_error "do-release-upgrade nicht gefunden"
+                return 1
+            fi
+
+            # Dry-Run: Prüfe Abhängigkeiten und Konflikte
+            log_info "$MSG_UPGRADE_DRY_RUN_START"
+            if ! do-release-upgrade -c 2>&1 | tee -a "$LOG_FILE" | grep -qi "new release\|upgrade"; then
+                log_warning "$MSG_UPGRADE_DRY_RUN_FAILED"
+            else
+                log_info "$MSG_UPGRADE_DRY_RUN_OK"
+            fi
+
+            # Führe Upgrade durch
             # shellcheck disable=SC2059
             printf "$MSG_UPGRADE_START\n" "neue Version" | tee -a "$LOG_FILE"
             if do-release-upgrade -f DistUpgradeViewNonInteractive 2>&1 | tee -a "$LOG_FILE"; then
@@ -1135,6 +1231,22 @@ perform_upgrade() {
             ;;
         fedora)
             local new_version=$((VERSION + 1))
+
+            # Dry-Run: Prüfe Download ohne Installation
+            log_info "$MSG_UPGRADE_DRY_RUN_START"
+            if ! dnf system-upgrade download --refresh --releasever="$new_version" --assumeno 2>&1 | tee -a "$LOG_FILE" | grep -qi "will be installed"; then
+                log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
+                echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
+                read -r response
+                if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+                    log_info "$MSG_UPGRADE_CANCELLED"
+                    return 1
+                fi
+            else
+                log_info "$MSG_UPGRADE_DRY_RUN_OK"
+            fi
+
+            # Führe Upgrade durch
             # shellcheck disable=SC2059
             printf "$MSG_UPGRADE_START\n" "Fedora $new_version" | tee -a "$LOG_FILE"
             if dnf system-upgrade download -y --releasever="$new_version" 2>&1 | tee -a "$LOG_FILE" && \
@@ -1283,14 +1395,14 @@ update_void() {
 check_reboot_required() {
     if [ "$AUTO_REBOOT" = true ]; then
         if [ -f /var/run/reboot-required ]; then
-            log_warning "$MSG_REBOOT_AUTO"
+            log_warning "$MSG_REBOOT_AUTO_COUNTDOWN"
             send_email "$EMAIL_SUBJECT_REBOOT" "$MSG_REBOOT_NOTIFICATION"
             send_notification \
                 "$NOTIFICATION_REBOOT_REQUIRED" \
-                "$NOTIFICATION_REBOOT_REQUIRED_BODY" \
+                "$NOTIFICATION_REBOOT_AUTO_BODY" \
                 "critical" \
                 "system-reboot"
-            shutdown -r +1 "System wird in 1 Minute neu gestartet (Update)"
+            shutdown -r +5 "System wird in 5 Minuten neu gestartet (Update)"
         fi
     else
         if [ -f /var/run/reboot-required ]; then
