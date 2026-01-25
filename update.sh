@@ -1393,26 +1393,67 @@ update_void() {
 
 # Neustart prüfen
 check_reboot_required() {
-    if [ "$AUTO_REBOOT" = true ]; then
-        if [ -f /var/run/reboot-required ]; then
-            log_warning "$MSG_REBOOT_AUTO_COUNTDOWN"
-            send_email "$EMAIL_SUBJECT_REBOOT" "$MSG_REBOOT_NOTIFICATION"
-            send_notification \
-                "$NOTIFICATION_REBOOT_REQUIRED" \
-                "$NOTIFICATION_REBOOT_AUTO_BODY" \
-                "critical" \
-                "system-reboot"
-            shutdown -r +5 "System wird in 5 Minuten neu gestartet (Update)"
-        fi
+    # Prüfe ob Neustart erforderlich ist (mehrere Methoden)
+    local reboot_needed=false
+
+    # Methode 1: /var/run/reboot-required (Debian/Ubuntu/Mint)
+    if [ -f /var/run/reboot-required ]; then
+        reboot_needed=true
+    fi
+
+    # Methode 2: Kernel-Update (neuer Kernel != laufender Kernel)
+    local current_kernel
+    local installed_kernel
+    current_kernel=$(uname -r)
+
+    case "$DISTRO" in
+        debian|ubuntu|linuxmint|mint)
+            installed_kernel=$(dpkg -l | grep "^ii.*linux-image-[0-9]" | awk '{print $2}' | sort -V | tail -1 | sed 's/linux-image-//')
+            if [ -n "$installed_kernel" ] && [ "$installed_kernel" != "$current_kernel" ]; then
+                reboot_needed=true
+            fi
+            ;;
+        fedora|rhel|centos|rocky|almalinux)
+            installed_kernel=$(rpm -q kernel --last | head -1 | awk '{print $1}' | sed 's/kernel-//')
+            if [ -n "$installed_kernel" ] && [ "$installed_kernel" != "$current_kernel" ]; then
+                reboot_needed=true
+            fi
+            ;;
+    esac
+
+    # Wenn kein Neustart erforderlich, zurück
+    if [ "$reboot_needed" = false ]; then
+        return 0
+    fi
+
+    # Neustart erforderlich - prüfe AUTO_REBOOT (robuste Prüfung)
+    if [ "$AUTO_REBOOT" = "true" ] || [ "$AUTO_REBOOT" = true ]; then
+        log_warning "$MSG_REBOOT_AUTO_COUNTDOWN"
+        log "AUTO_REBOOT ist aktiviert, starte Neustart-Countdown"
+
+        send_email "$EMAIL_SUBJECT_REBOOT" "$MSG_REBOOT_NOTIFICATION"
+        send_notification \
+            "$NOTIFICATION_REBOOT_REQUIRED" \
+            "$NOTIFICATION_REBOOT_AUTO_BODY" \
+            "critical" \
+            "system-reboot"
+
+        # Shutdown mit Countdown
+        log "Führe Shutdown-Befehl aus: shutdown -r +5"
+        shutdown -r +5 "System wird in 5 Minuten neu gestartet (Update)" 2>&1 | tee -a "$LOG_FILE"
+
+        # Bestätigung im Log
+        log_info "Neustart geplant in 5 Minuten"
+        log_info "Abbrechen mit: sudo shutdown -c"
     else
-        if [ -f /var/run/reboot-required ]; then
-            log_warning "$MSG_REBOOT_MANUAL"
-            send_notification \
-                "$NOTIFICATION_REBOOT_REQUIRED" \
-                "$NOTIFICATION_REBOOT_REQUIRED_BODY" \
-                "normal" \
-                "system-reboot"
-        fi
+        log_warning "$MSG_REBOOT_MANUAL"
+        log "AUTO_REBOOT ist deaktiviert (aktueller Wert: $AUTO_REBOOT)"
+
+        send_notification \
+            "$NOTIFICATION_REBOOT_REQUIRED" \
+            "$NOTIFICATION_REBOOT_REQUIRED_BODY" \
+            "normal" \
+            "system-reboot"
     fi
 }
 
