@@ -725,6 +725,122 @@ test_script() {
     echo
 }
 
+# Test-Benachrichtigungen
+test_notifications() {
+    print_header
+    echo -e "${GREEN}Benachrichtigungs-Test${NC}\n"
+
+    # Config laden
+    if [ ! -f "$CONFIG_FILE" ]; then
+        print_error "Config-Datei nicht gefunden: $CONFIG_FILE"
+        return
+    fi
+
+    # shellcheck source=/dev/null
+    source "$CONFIG_FILE"
+
+    local test_sent=false
+
+    # Desktop-Benachrichtigung testen
+    if [ "$ENABLE_DESKTOP_NOTIFICATION" = "true" ]; then
+        echo
+        if ask_yes_no "Möchtest du eine Test-Desktop-Benachrichtigung senden?" "y"; then
+            print_info "Sende Test-Desktop-Benachrichtigung..."
+
+            if ! command -v notify-send &> /dev/null; then
+                print_error "notify-send nicht installiert!"
+                print_warning "Installiere: sudo apt install libnotify-bin"
+            else
+                # Desktop-Benachrichtigung senden
+                if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+                    local user_id
+                    user_id=$(id -u "$SUDO_USER")
+                    sudo -u "$SUDO_USER" \
+                        DISPLAY=:0 \
+                        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${user_id}/bus" \
+                        notify-send \
+                            --urgency="normal" \
+                            --icon="software-update-available" \
+                            --expire-time="5000" \
+                            "Linux Update-Script" \
+                            "Test-Benachrichtigung - Installation erfolgreich!" 2>/dev/null && \
+                        print_info "Desktop-Benachrichtigung gesendet! ✓" || \
+                        print_error "Fehler beim Senden der Desktop-Benachrichtigung"
+                else
+                    notify-send \
+                        --urgency="normal" \
+                        --icon="software-update-available" \
+                        --expire-time="5000" \
+                        "Linux Update-Script" \
+                        "Test-Benachrichtigung - Installation erfolgreich!" 2>/dev/null && \
+                        print_info "Desktop-Benachrichtigung gesendet! ✓" || \
+                        print_error "Fehler beim Senden der Desktop-Benachrichtigung"
+                fi
+                test_sent=true
+            fi
+        fi
+    else
+        print_info "Desktop-Benachrichtigungen sind deaktiviert"
+    fi
+
+    # E-Mail-Benachrichtigung testen
+    if [ "$ENABLE_EMAIL" = "true" ]; then
+        echo
+        if ask_yes_no "Möchtest du eine Test-E-Mail senden?" "y"; then
+            if [ -z "$EMAIL_RECIPIENT" ]; then
+                print_error "EMAIL_RECIPIENT ist nicht konfiguriert!"
+            elif ! command -v mail &> /dev/null && ! command -v sendmail &> /dev/null; then
+                print_error "Kein Mail-Programm installiert (mail/sendmail)!"
+                print_warning "Installiere: sudo apt install mailutils"
+            else
+                print_info "Sende Test-E-Mail an: $EMAIL_RECIPIENT"
+
+                local test_body
+                test_body="Dies ist eine Test-E-Mail vom Linux Update-Script.
+
+Installation erfolgreich abgeschlossen!
+
+Hostname: $(hostname)
+Distribution: $([ -f /etc/os-release ] && . /etc/os-release && echo "$NAME $VERSION" || echo "Unbekannt")
+Zeitstempel: $(date)
+Config-Datei: $CONFIG_FILE
+
+Diese Benachrichtigung wurde automatisch generiert.
+Bitte nicht antworten."
+
+                if command -v mail &> /dev/null; then
+                    if echo "$test_body" | mail -s "Linux Update-Script - Test-Benachrichtigung" "$EMAIL_RECIPIENT" 2>/dev/null; then
+                        print_info "Test-E-Mail gesendet! ✓"
+                        print_info "Prüfe dein E-Mail-Postfach: $EMAIL_RECIPIENT"
+                        test_sent=true
+                    else
+                        print_error "Fehler beim Senden der E-Mail"
+                        print_warning "Ist ein MTA (z.B. DMA, ssmtp, postfix) konfiguriert?"
+                    fi
+                elif command -v sendmail &> /dev/null; then
+                    if echo "$test_body" | sendmail "$EMAIL_RECIPIENT" 2>/dev/null; then
+                        print_info "Test-E-Mail gesendet! ✓"
+                        print_info "Prüfe dein E-Mail-Postfach: $EMAIL_RECIPIENT"
+                        test_sent=true
+                    else
+                        print_error "Fehler beim Senden der E-Mail"
+                        print_warning "Ist ein MTA (z.B. DMA, ssmtp, postfix) konfiguriert?"
+                    fi
+                fi
+            fi
+        fi
+    else
+        print_info "E-Mail-Benachrichtigungen sind deaktiviert"
+    fi
+
+    if [ "$test_sent" = false ]; then
+        echo
+        print_info "Keine Test-Benachrichtigungen gesendet"
+    fi
+
+    echo
+}
+
 # Zusammenfassung anzeigen
 show_summary() {
     print_header
@@ -789,6 +905,10 @@ echo
 read -r -p "Drücke Enter zum Fortfahren..."
 
 test_script
+echo
+read -r -p "Drücke Enter zum Fortfahren..."
+
+test_notifications
 echo
 read -r -p "Drücke Enter zum Fortfahren..."
 
