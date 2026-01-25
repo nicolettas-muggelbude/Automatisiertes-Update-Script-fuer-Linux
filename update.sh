@@ -414,7 +414,7 @@ get_pending_kernel_version() {
     local pending_kernel=""
 
     case "$distro" in
-        debian|ubuntu|linuxmint|pop)
+        debian|ubuntu|linuxmint|pop|mx|mxlinux)
             # Prüfe verfügbare Kernel-Pakete
             if command -v apt-cache &> /dev/null; then
                 pending_kernel=$(apt-cache policy linux-image-generic 2>/dev/null | \
@@ -623,7 +623,7 @@ hold_kernel_update() {
     local unhold_cmd=""
 
     case "$distro" in
-        debian|ubuntu|linuxmint|pop)
+        debian|ubuntu|linuxmint|pop|mx|mxlinux)
             unhold_cmd="sudo apt-mark unhold linux-image-generic linux-headers-generic"
 
             if apt-mark hold linux-image-generic linux-headers-generic 2>&1 | tee -a "$LOG_FILE"; then
@@ -1205,7 +1205,7 @@ check_upgrade_available() {
             check_upgrade_mint
             return $?
             ;;
-        debian|ubuntu)
+        debian|ubuntu|mx|mxlinux)
             check_upgrade_debian
             return $?
             ;;
@@ -1292,7 +1292,7 @@ perform_upgrade() {
                 return 1
             fi
             ;;
-        debian|ubuntu)
+        debian|ubuntu|mx|mxlinux)
             # MX-Linux hat kein do-release-upgrade
             if echo "$DISTRO" | grep -qi "mx"; then
                 log_error "MX-Linux: Keine automatischen Distribution-Upgrades verfügbar"
@@ -1592,7 +1592,7 @@ check_reboot_required() {
     current_kernel=$(uname -r)
 
     case "$DISTRO" in
-        debian|ubuntu|linuxmint|mint)
+        debian|ubuntu|linuxmint|mint|mx|mxlinux)
             installed_kernel=$(dpkg -l | grep "^ii.*linux-image-[0-9]" | awk '{print $2}' | sort -V | tail -1 | sed 's/linux-image-//')
             if [ -n "$installed_kernel" ] && [ "$installed_kernel" != "$current_kernel" ]; then
                 reboot_needed=true
@@ -1747,7 +1747,7 @@ fi
 UPDATE_SUCCESS=false
 
 case "$DISTRO" in
-    debian|ubuntu|linuxmint|mint)
+    debian|ubuntu|linuxmint|mint|mx|mxlinux)
         update_debian && UPDATE_SUCCESS=true
         ;;
     rhel|centos|fedora|rocky|almalinux)
