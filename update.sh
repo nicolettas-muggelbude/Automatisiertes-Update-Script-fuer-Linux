@@ -375,9 +375,16 @@ send_notification() {
 
 # Zählt stabile Kernel-Versionen (Debian/Ubuntu)
 count_stable_kernels_debian() {
-    # Zähle installierte linux-image Pakete (keine RC, unsigned, etc.)
     local kernel_count
-    kernel_count=$(dpkg -l 2>/dev/null | grep -c "^ii.*linux-image-[0-9]" || echo "0")
+
+    # Methode 1: linux-version (präziser, filtert automatisch Meta-Pakete)
+    if command -v linux-version &> /dev/null; then
+        kernel_count=$(linux-version list 2>/dev/null | wc -l || echo "0")
+    else
+        # Methode 2: dpkg Fallback (funktioniert immer)
+        kernel_count=$(dpkg -l 2>/dev/null | grep -c "^ii.*linux-image-[0-9]" || echo "0")
+    fi
+
     echo "$kernel_count"
 }
 
