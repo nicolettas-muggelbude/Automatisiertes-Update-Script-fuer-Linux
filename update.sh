@@ -16,11 +16,20 @@ NC='\033[0m' # No Color
 # Konfigurationsdatei laden
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# XDG-konforme Config-Pfade
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-XDG_CONFIG_DIR="${XDG_CONFIG_HOME}/linux-update-script"
-XDG_CONFIG_FILE="${XDG_CONFIG_DIR}/config.conf"
+# Config-Pfade (Hybrid-Ansatz: System + User Override)
+# 1. System-Config (Primär - funktioniert immer, auch mit Cron)
 SYSTEM_CONFIG_FILE="/etc/linux-update-script/config.conf"
+
+# 2. User-Config (Override bei manuellem sudo-Aufruf)
+if [ -n "$SUDO_USER" ]; then
+    # Ermittle Home-Verzeichnis des aufrufenden Users
+    USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    USER_CONFIG_FILE="${USER_HOME}/.config/linux-update-script/config.conf"
+else
+    USER_CONFIG_FILE=""
+fi
+
+# 3. Legacy: Script-Verzeichnis (deprecated, wird in v2.0.0 entfernt)
 OLD_CONFIG_FILE="${SCRIPT_DIR}/config.conf"
 
 # Standard-Konfiguration
@@ -43,86 +52,103 @@ NVIDIA_AUTO_MOK_SIGN=false
 
 # Config-Migration Funktion (wird nach load_language aufgerufen)
 migrate_config() {
-    # Neue Location bereits vorhanden? → Migration nicht nötig
-    if [ -f "$XDG_CONFIG_FILE" ]; then
+    local needs_migration=false
+
+    # Prüfe ob alte Config existiert aber keine neue
+    if [ -f "$OLD_CONFIG_FILE" ] && [ ! -f "$SYSTEM_CONFIG_FILE" ]; then
+        needs_migration=true
+    fi
+
+    if [ "$needs_migration" = false ]; then
         return 0
     fi
 
-    # Alte Config vorhanden? → Migrieren
-    if [ -f "$OLD_CONFIG_FILE" ]; then
-        # Sprache muss bereits geladen sein für Meldungen
-        echo -e "${YELLOW}[${LABEL_INFO}]${NC} $MSG_CONFIG_MIGRATE_START"
+    # Migration durchführen
+    echo -e "${YELLOW}[${LABEL_INFO}]${NC} Migriere Konfiguration nach /etc/ (System-Standard)"
 
-        # Verzeichnis erstellen
-        mkdir -p "$XDG_CONFIG_DIR" 2>/dev/null || {
-            # shellcheck disable=SC2059
-            echo -e "${RED}[${LABEL_ERROR}]${NC} $(printf "$MSG_CONFIG_MIGRATE_FAILED" "Kann Verzeichnis nicht erstellen")"
-            return 1
-        }
-
-        # Config kopieren
-        if cp "$OLD_CONFIG_FILE" "$XDG_CONFIG_FILE" 2>/dev/null; then
-            # shellcheck disable=SC2059
-            echo -e "${GREEN}[${LABEL_INFO}]${NC} $(printf "$MSG_CONFIG_MIGRATE_SUCCESS" "$XDG_CONFIG_FILE")"
-
-            # Alte Config umbenennen (als Backup)
-            # shellcheck disable=SC2059
-            mv "$OLD_CONFIG_FILE" "${OLD_CONFIG_FILE}.migrated" 2>/dev/null && \
-                echo -e "${GREEN}[${LABEL_INFO}]${NC} $(printf "$MSG_CONFIG_MIGRATE_BACKUP" "${OLD_CONFIG_FILE}.migrated")"
-
-            return 0
-        else
-            # shellcheck disable=SC2059
-            echo -e "${RED}[${LABEL_ERROR}]${NC} $(printf "$MSG_CONFIG_MIGRATE_FAILED" "Kann Config nicht kopieren")"
-            return 1
-        fi
+    # Erstelle /etc Verzeichnis
+    if ! mkdir -p "$(dirname "$SYSTEM_CONFIG_FILE")" 2>/dev/null; then
+        # shellcheck disable=SC2059
+        echo -e "${RED}[${LABEL_ERROR}]${NC} $(printf "$MSG_CONFIG_MIGRATE_FAILED" "Kann /etc/linux-update-script/ nicht erstellen")"
+        return 1
     fi
 
-    return 0
+    # Kopiere Config nach /etc
+    if cp "$OLD_CONFIG_FILE" "$SYSTEM_CONFIG_FILE" 2>/dev/null; then
+        # shellcheck disable=SC2059
+        echo -e "${GREEN}[${LABEL_INFO}]${NC} $(printf "$MSG_CONFIG_MIGRATE_SUCCESS" "$SYSTEM_CONFIG_FILE")"
+
+        # Alte Config umbenennen (als Backup)
+        # shellcheck disable=SC2059
+        mv "$OLD_CONFIG_FILE" "${OLD_CONFIG_FILE}.migrated" 2>/dev/null && \
+            echo -e "${GREEN}[${LABEL_INFO}]${NC} $(printf "$MSG_CONFIG_MIGRATE_BACKUP" "${OLD_CONFIG_FILE}.migrated")"
+
+        return 0
+    else
+        # shellcheck disable=SC2059
+        echo -e "${RED}[${LABEL_ERROR}]${NC} $(printf "$MSG_CONFIG_MIGRATE_FAILED" "Kann Config nicht kopieren")"
+        return 1
+    fi
 }
 
-# Config-Datei finden (Fallback-Mechanismus)
-find_config_file() {
-    # Debug: Zeige welche Pfade geprüft werden (wird später ins Log geschrieben)
-    CONFIG_SEARCH_PATHS="XDG: $XDG_CONFIG_FILE | System: $SYSTEM_CONFIG_FILE | Alt: $OLD_CONFIG_FILE"
+# Hybrid Config-Loading: System + User Override
+load_config() {
+    local system_config_loaded=false
+    local user_config_loaded=false
 
-    # 1. XDG-konform (bevorzugt)
-    if [ -f "$XDG_CONFIG_FILE" ]; then
-        CONFIG_FILE="$XDG_CONFIG_FILE"
-        CONFIG_SOURCE="XDG"
-        return 0
-    fi
-
-    # 2. System-weit
+    # Schritt 1: Lade System-Config (falls vorhanden)
     if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$SYSTEM_CONFIG_FILE"
+        system_config_loaded=true
+        CONFIG_PRIMARY_SOURCE="System (/etc/)"
+    elif [ -f "$OLD_CONFIG_FILE" ]; then
+        # Legacy-Fallback
+        # shellcheck source=/dev/null
+        source "$OLD_CONFIG_FILE"
+        system_config_loaded=true
+        CONFIG_PRIMARY_SOURCE="Legacy (Script-Dir)"
+    else
+        CONFIG_PRIMARY_SOURCE="Defaults (keine Config)"
+    fi
+
+    # Schritt 2: Lade User-Config als Override (nur bei sudo-Aufruf)
+    if [ -n "$USER_CONFIG_FILE" ] && [ -f "$USER_CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$USER_CONFIG_FILE"
+        user_config_loaded=true
+        CONFIG_OVERRIDE_SOURCE="User (~/.config/)"
+    else
+        CONFIG_OVERRIDE_SOURCE="Kein Override"
+    fi
+
+    # Debug-Info für Logging
+    if [ "$system_config_loaded" = true ] && [ "$user_config_loaded" = true ]; then
+        CONFIG_SOURCE="Hybrid (System + User Override)"
+    elif [ "$system_config_loaded" = true ]; then
+        CONFIG_SOURCE="$CONFIG_PRIMARY_SOURCE"
+    else
+        CONFIG_SOURCE="$CONFIG_PRIMARY_SOURCE"
+    fi
+
+    # Setze CONFIG_FILE für Logging (wird später genutzt)
+    if [ "$user_config_loaded" = true ]; then
+        # shellcheck disable=SC2034
+        CONFIG_FILE="$USER_CONFIG_FILE (Override von $SYSTEM_CONFIG_FILE)"
+    elif [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        # shellcheck disable=SC2034
         CONFIG_FILE="$SYSTEM_CONFIG_FILE"
-        CONFIG_SOURCE="System"
-        return 0
-    fi
-
-    # 3. Alt (deprecated, nur für Backwards-Compatibility)
-    if [ -f "$OLD_CONFIG_FILE" ]; then
+    elif [ -f "$OLD_CONFIG_FILE" ]; then
+        # shellcheck disable=SC2034
         CONFIG_FILE="$OLD_CONFIG_FILE"
-        CONFIG_SOURCE="Alt (deprecated)"
-        # Warnung wird später ausgegeben (nach load_language)
-        return 0
+    else
+        # shellcheck disable=SC2034
+        CONFIG_FILE=""
     fi
-
-    # Keine Config gefunden
-    CONFIG_SOURCE="Keine"
-    return 1
 }
 
-# Config-Datei suchen
-if ! find_config_file; then
-    CONFIG_FILE=""  # Keine Config gefunden, nur Defaults nutzen
-fi
-
-# Konfiguration laden, falls vorhanden
-if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
-    # shellcheck source=/dev/null
-    source "$CONFIG_FILE"
-fi
+# Konfiguration laden
+load_config
 
 # Sprache laden
 load_language() {
@@ -161,16 +187,18 @@ load_language
 migrate_config
 
 # Warnung bei alter Config-Location
-if [ "$CONFIG_FILE" = "$OLD_CONFIG_FILE" ] && [ -f "$OLD_CONFIG_FILE" ]; then
+if [ "$CONFIG_PRIMARY_SOURCE" = "Legacy (Script-Dir)" ] && [ -f "$OLD_CONFIG_FILE" ]; then
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_OLD_LOCATION"
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_OLD_DEPRECATED"
+    echo -e "${YELLOW}[${LABEL_WARNING}]${NC} Empfehlung: sudo cp $OLD_CONFIG_FILE /etc/linux-update-script/config.conf"
 fi
 
 # Warnung wenn KEINE Config gefunden wurde
-if [ -z "$CONFIG_FILE" ]; then
+if [ "$CONFIG_SOURCE" = "Defaults (keine Config)" ]; then
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_NOT_FOUND"
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} Verwende Standard-Konfiguration"
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} E-Mail- und Desktop-Benachrichtigungen sind möglicherweise nicht konfiguriert!"
+    echo -e "${YELLOW}[${LABEL_WARNING}]${NC} Erstelle Config mit: ./install.sh"
 fi
 
 # Timestamp für Logdatei
@@ -1627,29 +1655,46 @@ log_info "$MSG_KERNEL: $(uname -r)"
 check_root
 
 # Info über verwendete Config-Datei (nur im Log)
-log "=== Config-Debugging ==="
-log "Config-Suche Pfade: $CONFIG_SEARCH_PATHS"
-log "Config-Quelle: $CONFIG_SOURCE"
+log "=== Config-Debugging (Hybrid-Modus) ==="
+log "SUDO_USER: ${SUDO_USER:-<nicht gesetzt>}"
+log "Primäre Quelle: $CONFIG_PRIMARY_SOURCE"
+log "Override Quelle: $CONFIG_OVERRIDE_SOURCE"
+log "Gesamt: $CONFIG_SOURCE"
 
-if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ]; then
-    # shellcheck disable=SC2059
-    log "$(printf "$MSG_CONFIG_LOCATION" "$CONFIG_FILE")"
-
-    # Debug: Log wichtige Config-Werte
-    log "Geladene Config-Werte:"
-    log "  AUTO_REBOOT='$AUTO_REBOOT' (Typ: $(type -t AUTO_REBOOT 2>/dev/null || echo 'undefined'))"
-    log "  ENABLE_EMAIL='$ENABLE_EMAIL'"
-    log "  ENABLE_DESKTOP_NOTIFICATION='$ENABLE_DESKTOP_NOTIFICATION'"
-    log "  KERNEL_PROTECTION='$KERNEL_PROTECTION'"
-
-    # Zeige rohen Wert aus Config-Datei
-    if grep -q "^AUTO_REBOOT=" "$CONFIG_FILE" 2>/dev/null; then
-        log "  AUTO_REBOOT in Config-Datei: $(grep "^AUTO_REBOOT=" "$CONFIG_FILE")"
-    fi
+# Zeige welche Config-Dateien existieren
+log "Verfügbare Configs:"
+if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+    log "  ✓ System: $SYSTEM_CONFIG_FILE"
 else
-    log "WARNUNG: Keine Config-Datei gefunden, verwende Standard-Werte"
-    log "  AUTO_REBOOT=$AUTO_REBOOT (Standard)"
+    log "  ✗ System: $SYSTEM_CONFIG_FILE"
 fi
+if [ -n "$USER_CONFIG_FILE" ] && [ -f "$USER_CONFIG_FILE" ]; then
+    log "  ✓ User: $USER_CONFIG_FILE"
+elif [ -n "$USER_CONFIG_FILE" ]; then
+    log "  ✗ User: $USER_CONFIG_FILE"
+fi
+if [ -f "$OLD_CONFIG_FILE" ]; then
+    log "  ✓ Legacy: $OLD_CONFIG_FILE"
+else
+    log "  ✗ Legacy: $OLD_CONFIG_FILE"
+fi
+
+# Debug: Log wichtige Config-Werte
+log "Geladene Config-Werte:"
+log "  AUTO_REBOOT='$AUTO_REBOOT'"
+log "  ENABLE_EMAIL='$ENABLE_EMAIL'"
+log "  EMAIL_RECIPIENT='$EMAIL_RECIPIENT'"
+log "  ENABLE_DESKTOP_NOTIFICATION='$ENABLE_DESKTOP_NOTIFICATION'"
+log "  KERNEL_PROTECTION='$KERNEL_PROTECTION'"
+
+# Zeige rohen Wert aus Config-Dateien
+if [ -f "$SYSTEM_CONFIG_FILE" ] && grep -q "^AUTO_REBOOT=" "$SYSTEM_CONFIG_FILE" 2>/dev/null; then
+    log "  AUTO_REBOOT in System-Config: $(grep "^AUTO_REBOOT=" "$SYSTEM_CONFIG_FILE")"
+fi
+if [ -f "$USER_CONFIG_FILE" ] && grep -q "^AUTO_REBOOT=" "$USER_CONFIG_FILE" 2>/dev/null; then
+    log "  AUTO_REBOOT in User-Config: $(grep "^AUTO_REBOOT=" "$USER_CONFIG_FILE")"
+fi
+
 log "=== Ende Config-Debugging ==="
 
 # Distribution erkennen
