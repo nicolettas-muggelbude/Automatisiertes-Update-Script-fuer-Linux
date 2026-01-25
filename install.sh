@@ -210,23 +210,143 @@ create_config() {
             echo
             print_warning "Kein Mail-Programm gefunden (mail/sendmail)"
             echo
-            echo "Für E-Mail-Benachrichtigungen benötigst du:"
-            echo "  1. Mail-Client (mail oder mailx)"
-            echo "  2. MTA (Mail Transfer Agent) wie postfix oder ssmtp"
+            echo "Für E-Mail-Benachrichtigungen wird ein Mail-Client benötigt (mail oder mailx)."
+            echo "Empfohlen: mailutils (einfach zu installieren)"
             echo
-            echo "Installation:"
-            echo "  - Debian/Ubuntu/Mint: sudo apt install mailutils postfix"
-            echo "  - RHEL/Fedora: sudo dnf install mailx postfix"
-            echo "  - openSUSE: sudo zypper install mailx postfix"
-            echo "  - Arch/Manjaro: sudo pacman -S mailutils postfix"
-            echo "  - Solus: sudo eopkg install mailutils postfix"
-            echo "  - Void Linux: sudo xbps-install -S mailx postfix"
+
+            # Distribution erkennen und Installation anbieten
+            if [ -f /etc/os-release ]; then
+                # shellcheck source=/dev/null
+                . /etc/os-release
+                case "$ID" in
+                    debian|ubuntu|linuxmint|pop)
+                        echo "Installation für $PRETTY_NAME:"
+                        echo "  sudo apt-get install mailutils"
+                        echo
+                        if ask_yes_no "Möchtest du mailutils jetzt installieren?" "y"; then
+                            if sudo apt-get install -y mailutils 2>/dev/null; then
+                                print_info "mailutils erfolgreich installiert"
+                            else
+                                print_error "Installation fehlgeschlagen"
+                            fi
+                        fi
+                        ;;
+                    fedora|rhel|centos|rocky|almalinux)
+                        echo "Installation für $PRETTY_NAME:"
+                        echo "  sudo dnf install mailx"
+                        echo
+                        if ask_yes_no "Möchtest du mailx jetzt installieren?" "y"; then
+                            if sudo dnf install -y mailx 2>/dev/null; then
+                                print_info "mailx erfolgreich installiert"
+                            else
+                                print_error "Installation fehlgeschlagen"
+                            fi
+                        fi
+                        ;;
+                    arch|manjaro|endeavouros|garuda|arcolinux)
+                        echo "Installation für $PRETTY_NAME:"
+                        echo "  sudo pacman -S mailutils"
+                        echo
+                        if ask_yes_no "Möchtest du mailutils jetzt installieren?" "y"; then
+                            if sudo pacman -S --noconfirm mailutils 2>/dev/null; then
+                                print_info "mailutils erfolgreich installiert"
+                            else
+                                print_error "Installation fehlgeschlagen"
+                            fi
+                        fi
+                        ;;
+                    opensuse*|sles)
+                        echo "Installation für $PRETTY_NAME:"
+                        echo "  sudo zypper install mailx"
+                        echo
+                        if ask_yes_no "Möchtest du mailx jetzt installieren?" "y"; then
+                            if sudo zypper install -y mailx 2>/dev/null; then
+                                print_info "mailx erfolgreich installiert"
+                            else
+                                print_error "Installation fehlgeschlagen"
+                            fi
+                        fi
+                        ;;
+                    solus)
+                        echo "Installation für $PRETTY_NAME:"
+                        echo "  sudo eopkg install mailutils"
+                        echo
+                        if ask_yes_no "Möchtest du mailutils jetzt installieren?" "y"; then
+                            if sudo eopkg install -y mailutils 2>/dev/null; then
+                                print_info "mailutils erfolgreich installiert"
+                            else
+                                print_error "Installation fehlgeschlagen"
+                            fi
+                        fi
+                        ;;
+                    void)
+                        echo "Installation für $PRETTY_NAME:"
+                        echo "  sudo xbps-install -S mailx"
+                        echo
+                        if ask_yes_no "Möchtest du mailx jetzt installieren?" "y"; then
+                            if sudo xbps-install -y mailx 2>/dev/null; then
+                                print_info "mailx erfolgreich installiert"
+                            else
+                                print_error "Installation fehlgeschlagen"
+                            fi
+                        fi
+                        ;;
+                    *)
+                        echo "  Siehe Dokumentation deiner Distribution"
+                        ;;
+                esac
+            fi
+
             echo
-            echo "Für einfache Konfiguration (z.B. Gmail) verwende ssmtp statt postfix."
-            echo "Du kannst dies jetzt installieren oder später nachrüsten."
+            print_warning "WICHTIG: Für den E-Mail-Versand wird zusätzlich ein MTA (Mail Transfer Agent) benötigt!"
             echo
-            if ask_yes_no "Trotzdem mit E-Mail-Benachrichtigung fortfahren?" "y"; then
-                print_info "E-Mail-Benachrichtigung aktiviert (Mail-Programm muss noch installiert werden)"
+            echo "Empfohlen: DMA (DragonFly Mail Agent)"
+            echo "  - Keine Konfiguration erforderlich"
+            echo "  - Kein laufender Dienst, kein offener Port"
+            echo "  - Perfekt für lokale Mails (cron, Benachrichtigungen)"
+            echo
+
+            # DMA-Installation anbieten (nur Debian-basiert)
+            if [ -f /etc/os-release ]; then
+                # shellcheck source=/dev/null
+                . /etc/os-release
+                case "$ID" in
+                    debian|ubuntu|linuxmint|pop)
+                        if ! command -v dma &> /dev/null; then
+                            if ask_yes_no "Möchtest du DMA (empfohlen) jetzt installieren?" "y"; then
+                                if sudo apt-get install -y dma 2>/dev/null; then
+                                    print_info "DMA erfolgreich installiert - E-Mail-Versand ist bereit!"
+                                else
+                                    print_error "DMA-Installation fehlgeschlagen"
+                                    echo
+                                    echo "Alternative MTAs:"
+                                    echo "  - ssmtp: sudo apt install ssmtp"
+                                    echo "  - postfix: sudo apt install postfix"
+                                fi
+                            else
+                                echo
+                                echo "Alternative MTAs (manuelle Installation später möglich):"
+                                echo "  - ssmtp: sudo apt install ssmtp (gut für Gmail/externe SMTP)"
+                                echo "  - postfix: sudo apt install postfix (volle MTA-Funktionalität)"
+                            fi
+                        else
+                            print_info "DMA bereits installiert!"
+                        fi
+                        ;;
+                    *)
+                        echo "DMA ist primär für Debian/Ubuntu verfügbar."
+                        echo "Alternative MTAs für deine Distribution:"
+                        echo "  - ssmtp (einfach)"
+                        echo "  - postfix (komplex, volle Funktionalität)"
+                        echo
+                        echo "Siehe README.md für Details zur E-Mail-Konfiguration."
+                        ;;
+                esac
+            fi
+            echo
+
+            if ask_yes_no "Mit E-Mail-Benachrichtigung fortfahren?" "y"; then
+                print_info "E-Mail-Benachrichtigung aktiviert (MTA-Konfiguration noch erforderlich)"
             else
                 enable_email="false"
                 print_info "E-Mail-Benachrichtigung deaktiviert"
