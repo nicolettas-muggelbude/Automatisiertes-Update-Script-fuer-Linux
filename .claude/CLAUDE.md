@@ -4,7 +4,7 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot
+v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot (Released: 2026-01-25)
 
 ## Vorherige Versionen
 - v1.5.1 - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
@@ -226,8 +226,8 @@ Update-Script/
 
 ## Aktueller Status
 
-### v1.6.0 (In Entwicklung: 2026-01-25)
-✅ **Alle Features implementiert - bereit für Testing**
+### v1.6.0 (Released: 2026-01-25)
+✅ **Vollständig implementiert und veröffentlicht**
 
 **Änderungen:**
 - 6 Dateien geändert
@@ -245,11 +245,10 @@ Update-Script/
 - be982f4: NVIDIA-Prüfung für alle 6 Distributionen
 - 74dd97c: NVIDIA Secure Boot & Kernel-Hold-Mechanismus
 
-**Nächste Schritte:**
-- Testing auf verschiedenen Distributionen
-- Community-Feedback sammeln
-- Release Notes erstellen
-- GitHub Release v1.6.0
+**Release:**
+- Git Tag: v1.6.0
+- GitHub Release: https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/releases/tag/v1.6.0
+- Release Notes: RELEASE_NOTES_v1.6.0.md
 
 ### v1.5.1 (Released: 2025-12-27)
 ✅ **Vollständig implementiert und veröffentlicht**
