@@ -1197,9 +1197,9 @@ perform_upgrade() {
                 fi
             fi
 
-            # Dry-Run: Prüfe Abhängigkeiten und Konflikte
+            # Schritt 1: Check - Prüfe ob Upgrade verfügbar
             log_info "$MSG_UPGRADE_DRY_RUN_START"
-            if ! mintupgrade --dry-run 2>&1 | tee -a "$LOG_FILE"; then
+            if ! mintupgrade check 2>&1 | tee -a "$LOG_FILE"; then
                 log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
                 echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
                 read -r response
@@ -1211,10 +1211,18 @@ perform_upgrade() {
                 log_info "$MSG_UPGRADE_DRY_RUN_OK"
             fi
 
-            # Führe Mint-Upgrade durch
+            # Schritt 2: Download - Lade Upgrade-Pakete herunter
             # shellcheck disable=SC2059
             printf "$MSG_UPGRADE_START\n" "neue Linux Mint Version" | tee -a "$LOG_FILE"
-            if mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
+            log_info "$MSG_UPGRADE_MINTUPGRADE_DOWNLOAD"
+            if ! mintupgrade download 2>&1 | tee -a "$LOG_FILE"; then
+                log_error "$MSG_UPGRADE_MINTUPGRADE_DOWNLOAD_FAILED"
+                return 1
+            fi
+
+            # Schritt 3: Upgrade - Führe Upgrade durch
+            log_info "$MSG_UPGRADE_MINTUPGRADE_UPGRADE"
+            if mintupgrade upgrade 2>&1 | tee -a "$LOG_FILE"; then
                 log_info "$MSG_UPGRADE_SUCCESS"
                 return 0
             else
