@@ -1045,6 +1045,12 @@ check_upgrade_arch() {
 check_upgrade_debian() {
     log_info "$MSG_UPGRADE_CHECKING_DEBIAN"
 
+    # MX-Linux hat kein do-release-upgrade (Debian-basiert, aber eigenes System)
+    if echo "$DISTRO" | grep -qi "mx"; then
+        log_info "MX-Linux: Keine automatischen Distribution-Upgrades verfügbar"
+        return 1
+    fi
+
     if ! command -v do-release-upgrade &> /dev/null; then
         log_warning "do-release-upgrade nicht gefunden"
         return 1
@@ -1287,6 +1293,13 @@ perform_upgrade() {
             fi
             ;;
         debian|ubuntu)
+            # MX-Linux hat kein do-release-upgrade
+            if echo "$DISTRO" | grep -qi "mx"; then
+                log_error "MX-Linux: Keine automatischen Distribution-Upgrades verfügbar"
+                log_info "Bitte nutze MX Package Installer für Distribution-Upgrades"
+                return 1
+            fi
+
             # Debian/Ubuntu: do-release-upgrade verwenden
             if ! command -v do-release-upgrade &> /dev/null; then
                 log_error "do-release-upgrade nicht gefunden"
@@ -1611,8 +1624,8 @@ check_reboot_required() {
             "system-reboot"
 
         # Shutdown mit Countdown
-        log "Führe Shutdown-Befehl aus: shutdown -r +5"
-        shutdown -r +5 "System wird in 5 Minuten neu gestartet (Update)" 2>&1 | tee -a "$LOG_FILE"
+        log "Führe Shutdown-Befehl aus: /sbin/shutdown -r +5"
+        /sbin/shutdown -r +5 "System wird in 5 Minuten neu gestartet (Update)" 2>&1 | tee -a "$LOG_FILE"
 
         # Bestätigung im Log
         log_info "Neustart geplant in 5 Minuten"
