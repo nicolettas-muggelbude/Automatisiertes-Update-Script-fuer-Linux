@@ -16,10 +16,16 @@ NC='\033[0m' # No Color
 # Script-Verzeichnis
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# XDG-konforme Config-Pfade (v1.6.0+)
-XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
-CONFIG_DIR="${XDG_CONFIG_HOME}/linux-update-script"
-CONFIG_FILE="${CONFIG_DIR}/config.conf"
+# Config-Pfade (Hybrid-System: v1.6.0+)
+# Primär: System-Config in /etc/
+SYSTEM_CONFIG_DIR="/etc/linux-update-script"
+SYSTEM_CONFIG_FILE="${SYSTEM_CONFIG_DIR}/config.conf"
+
+# Optional: User-Config in ~/.config/ (für Override bei manuellem sudo)
+USER_CONFIG_DIR="$HOME/.config/linux-update-script"
+USER_CONFIG_FILE="${USER_CONFIG_DIR}/config.conf"
+
+# Legacy
 OLD_CONFIG_FILE="${SCRIPT_DIR}/config.conf"
 UPDATE_SCRIPT="${SCRIPT_DIR}/update.sh"
 
@@ -139,17 +145,27 @@ ask_input() {
 
 # Konfiguration laden (falls vorhanden)
 load_existing_config() {
-    # Neue XDG-Location prüfen
-    if [ -f "$CONFIG_FILE" ]; then
-        print_info "$INSTALL_CONFIG_EXISTS"
+    # Hybrid-Ansatz: System-Config → User-Config → Alt
+
+    # Priorität 1: System-Config (/etc/)
+    if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        print_info "$INSTALL_CONFIG_EXISTS (System: /etc/)"
         # shellcheck source=/dev/null
-        source "$CONFIG_FILE"
+        source "$SYSTEM_CONFIG_FILE"
         return 0
     fi
 
-    # Alte Location als Fallback (wird später migriert)
+    # Priorität 2: User-Config (~/.config/)
+    if [ -f "$USER_CONFIG_FILE" ]; then
+        print_info "$INSTALL_CONFIG_EXISTS (User: ~/.config/)"
+        # shellcheck source=/dev/null
+        source "$USER_CONFIG_FILE"
+        return 0
+    fi
+
+    # Priorität 3: Alte Location (Script-Verzeichnis)
     if [ -f "$OLD_CONFIG_FILE" ]; then
-        print_info "$INSTALL_CONFIG_EXISTS (alte Location)"
+        print_info "$INSTALL_CONFIG_EXISTS (Legacy: Script-Dir)"
         # shellcheck source=/dev/null
         source "$OLD_CONFIG_FILE"
         return 0
@@ -497,21 +513,24 @@ create_config() {
         print_info "Log-Verzeichnis geändert auf: $log_dir"
     fi
 
-    # Config-Verzeichnis erstellen (XDG-konform)
-    if [ ! -d "$CONFIG_DIR" ]; then
-        mkdir -p "$CONFIG_DIR" 2>/dev/null || {
-            print_error "Kann Config-Verzeichnis nicht erstellen: $CONFIG_DIR"
+    # System-Config-Verzeichnis erstellen (/etc/)
+    if [ ! -d "$SYSTEM_CONFIG_DIR" ]; then
+        echo
+        print_info "Erstelle System-Konfigurationsverzeichnis: $SYSTEM_CONFIG_DIR"
+        if ! sudo mkdir -p "$SYSTEM_CONFIG_DIR" 2>/dev/null; then
+            print_error "Kann System-Config-Verzeichnis nicht erstellen: $SYSTEM_CONFIG_DIR"
+            print_warning "Benötigt sudo-Rechte für /etc/"
             exit 1
-        }
+        fi
     fi
 
     # Alte Config migrieren (falls vorhanden)
-    if [ -f "$OLD_CONFIG_FILE" ] && [ ! -f "$CONFIG_FILE" ]; then
+    if [ -f "$OLD_CONFIG_FILE" ] && [ ! -f "$SYSTEM_CONFIG_FILE" ]; then
         echo
         print_info "Alte Konfiguration gefunden: $OLD_CONFIG_FILE"
         if ask_yes_no "Soll die alte Konfiguration migriert werden?" "y"; then
-            if cp "$OLD_CONFIG_FILE" "$CONFIG_FILE" 2>/dev/null; then
-                print_info "Konfiguration erfolgreich migriert nach: $CONFIG_FILE"
+            if sudo cp "$OLD_CONFIG_FILE" "$SYSTEM_CONFIG_FILE" 2>/dev/null; then
+                print_info "Konfiguration erfolgreich migriert nach: $SYSTEM_CONFIG_FILE"
                 mv "$OLD_CONFIG_FILE" "${OLD_CONFIG_FILE}.migrated" 2>/dev/null && \
                     print_info "Alte Konfiguration gesichert als: ${OLD_CONFIG_FILE}.migrated"
                 echo
@@ -523,8 +542,28 @@ create_config() {
         fi
     fi
 
-    # Konfigurationsdatei schreiben
-    cat > "$CONFIG_FILE" << EOF
+    # User-Config migrieren (falls vorhanden in ~/.config/)
+    if [ -f "$USER_CONFIG_FILE" ] && [ ! -f "$SYSTEM_CONFIG_FILE" ]; then
+        echo
+        print_info "User-Konfiguration gefunden: $USER_CONFIG_FILE"
+        if ask_yes_no "Soll die User-Konfiguration als System-Default kopiert werden?" "y"; then
+            if sudo cp "$USER_CONFIG_FILE" "$SYSTEM_CONFIG_FILE" 2>/dev/null; then
+                print_info "Konfiguration erfolgreich kopiert nach: $SYSTEM_CONFIG_FILE"
+                print_info "User-Config bleibt erhalten für manuelle Override"
+                echo
+                print_info "Installation abgeschlossen - bestehende Konfiguration wurde übernommen"
+                return 0
+            else
+                print_error "Fehler beim Kopieren der Konfiguration"
+            fi
+        fi
+    fi
+
+    # Konfigurationsdatei schreiben (nach /etc/)
+    echo
+    print_info "Erstelle System-Konfiguration: $SYSTEM_CONFIG_FILE"
+
+    sudo tee "$SYSTEM_CONFIG_FILE" > /dev/null << EOF
 # Update-Script Konfiguration
 # $INSTALL_GENERATED_AT: $(date)
 
@@ -568,7 +607,15 @@ ENABLE_DESKTOP_NOTIFICATION=$enable_desktop_notification
 NOTIFICATION_TIMEOUT=$notification_timeout
 EOF
 
-    print_info "$INSTALL_CONFIG_SAVED: $CONFIG_FILE"
+    if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        print_info "$INSTALL_CONFIG_SAVED: $SYSTEM_CONFIG_FILE"
+        echo
+        print_info "HINWEIS: System-Config in /etc/ funktioniert mit Cron-Jobs"
+        print_info "Optional: User-Override in ~/.config/linux-update-script/config.conf möglich"
+    else
+        print_error "Fehler beim Erstellen der Konfigurationsdatei"
+        exit 1
+    fi
     echo
 
     # Log-Verzeichnis erstellen
@@ -612,11 +659,19 @@ setup_cron() {
         return
     fi
 
-    # Log-Verzeichnis aus Config laden
+    # Log-Verzeichnis aus Config laden (System-Config hat Priorität)
     local log_dir="/var/log/system-updates"
-    if [ -f "$CONFIG_FILE" ]; then
+    if [ -f "$SYSTEM_CONFIG_FILE" ]; then
         # shellcheck source=/dev/null
-        source "$CONFIG_FILE"
+        source "$SYSTEM_CONFIG_FILE"
+        log_dir="${LOG_DIR:-/var/log/system-updates}"
+    elif [ -f "$USER_CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$USER_CONFIG_FILE"
+        log_dir="${LOG_DIR:-/var/log/system-updates}"
+    elif [ -f "$OLD_CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$OLD_CONFIG_FILE"
         log_dir="${LOG_DIR:-/var/log/system-updates}"
     fi
 
@@ -735,7 +790,18 @@ test_script() {
     print_info "Starte Test..."
     echo
     echo "--- Konfiguration ---"
-    cat "$CONFIG_FILE"
+    if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        echo "System-Config: $SYSTEM_CONFIG_FILE"
+        cat "$SYSTEM_CONFIG_FILE"
+    elif [ -f "$USER_CONFIG_FILE" ]; then
+        echo "User-Config: $USER_CONFIG_FILE"
+        cat "$USER_CONFIG_FILE"
+    elif [ -f "$OLD_CONFIG_FILE" ]; then
+        echo "Legacy-Config: $OLD_CONFIG_FILE"
+        cat "$OLD_CONFIG_FILE"
+    else
+        echo "Keine Config-Datei gefunden!"
+    fi
     echo
     echo "--- Distribution ---"
     if [ -f /etc/os-release ]; then
@@ -752,14 +818,30 @@ test_notifications() {
     print_header
     echo -e "${GREEN}Benachrichtigungs-Test${NC}\n"
 
-    # Config laden
-    if [ ! -f "$CONFIG_FILE" ]; then
-        print_error "Config-Datei nicht gefunden: $CONFIG_FILE"
-        return
+    # Config laden (Hybrid-Ansatz)
+    local config_loaded=false
+    if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$SYSTEM_CONFIG_FILE"
+        config_loaded=true
+        print_info "Lade System-Config: $SYSTEM_CONFIG_FILE"
+    elif [ -f "$USER_CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$USER_CONFIG_FILE"
+        config_loaded=true
+        print_info "Lade User-Config: $USER_CONFIG_FILE"
+    elif [ -f "$OLD_CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$OLD_CONFIG_FILE"
+        config_loaded=true
+        print_info "Lade Legacy-Config: $OLD_CONFIG_FILE"
     fi
 
-    # shellcheck source=/dev/null
-    source "$CONFIG_FILE"
+    if [ "$config_loaded" = false ]; then
+        print_error "Keine Config-Datei gefunden!"
+        print_warning "Bitte führe zuerst die Konfiguration durch"
+        return
+    fi
 
     local test_sent=false
 
@@ -825,7 +907,7 @@ Installation erfolgreich abgeschlossen!
 Hostname: $(hostname)
 Distribution: $([ -f /etc/os-release ] && . /etc/os-release && echo "$NAME $VERSION" || echo "Unbekannt")
 Zeitstempel: $(date)
-Config-Datei: $CONFIG_FILE
+Config-Datei: $SYSTEM_CONFIG_FILE
 
 Diese Benachrichtigung wurde automatisch generiert.
 Bitte nicht antworten."
@@ -868,12 +950,28 @@ show_summary() {
     print_header
     echo -e "${GREEN}Installation abgeschlossen!${NC}\n"
 
-    echo "Konfigurationsdatei: $CONFIG_FILE"
+    # Zeige aktive Config-Datei
+    local active_config=""
+    if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+        active_config="$SYSTEM_CONFIG_FILE"
+        echo "System-Konfiguration: $SYSTEM_CONFIG_FILE"
+    elif [ -f "$USER_CONFIG_FILE" ]; then
+        active_config="$USER_CONFIG_FILE"
+        echo "User-Konfiguration: $USER_CONFIG_FILE"
+    elif [ -f "$OLD_CONFIG_FILE" ]; then
+        active_config="$OLD_CONFIG_FILE"
+        echo "Legacy-Konfiguration: $OLD_CONFIG_FILE"
+    else
+        echo "FEHLER: Keine Konfigurationsdatei gefunden!"
+    fi
+
     echo "Update-Script: $UPDATE_SCRIPT"
     echo
     echo "--- Konfiguration ---"
-    if [ -f "$CONFIG_FILE" ]; then
-        cat "$CONFIG_FILE"
+    if [ -n "$active_config" ] && [ -f "$active_config" ]; then
+        cat "$active_config"
+    else
+        echo "Keine Konfiguration vorhanden!"
     fi
     echo
     echo -e "${YELLOW}Nächste Schritte:${NC}"
@@ -903,12 +1001,25 @@ if [ ! -x "$UPDATE_SCRIPT" ]; then
     chmod +x "$UPDATE_SCRIPT" 2>/dev/null
 fi
 
-# Bestehende Konfiguration prüfen
-if [ -f "$CONFIG_FILE" ]; then
+# Bestehende Konfiguration prüfen (Hybrid-Ansatz)
+existing_config=""
+config_type=""
+if [ -f "$SYSTEM_CONFIG_FILE" ]; then
+    existing_config="$SYSTEM_CONFIG_FILE"
+    config_type="System-Config (/etc/)"
+elif [ -f "$USER_CONFIG_FILE" ]; then
+    existing_config="$USER_CONFIG_FILE"
+    config_type="User-Config (~/.config/)"
+elif [ -f "$OLD_CONFIG_FILE" ]; then
+    existing_config="$OLD_CONFIG_FILE"
+    config_type="Legacy-Config (Script-Dir)"
+fi
+
+if [ -n "$existing_config" ]; then
     print_header
-    print_warning "Bestehende Konfiguration gefunden!"
+    print_warning "Bestehende Konfiguration gefunden! ($config_type)"
     echo
-    cat "$CONFIG_FILE"
+    cat "$existing_config"
     echo
 
     if ! ask_yes_no "Möchtest du die Konfiguration ändern?" "y"; then

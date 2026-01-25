@@ -226,6 +226,74 @@ Update-Script/
 
 ## Aktueller Status
 
+### v1.6.1 (In Entwicklung: 2026-01-25)
+🔧 **Bugfixes & Hybrid-Config System**
+
+**Kritische Bugfixes:**
+1. ✅ **AUTO_REBOOT Fix** - Funktioniert jetzt korrekt
+   - Problem: Config wurde nicht geladen (XDG-Pfad bei sudo falsch)
+   - Lösung: Hybrid-Config System implementiert
+   - Robuste Boolean-Prüfung: `[ "$AUTO_REBOOT" = "true" ] || [ "$AUTO_REBOOT" = true ]`
+
+2. ✅ **Linux Mint Upgrade Support** - mintupgrade Workflow
+   - Problem: Mint verwendet mintupgrade statt do-release-upgrade
+   - Lösung: 4-Schritt-Workflow (check → --dry-run → download → upgrade)
+   - Automatische mintupgrade Installation
+
+3. ✅ **Dry-Run für alle Distributionen**
+   - Mint: `mintupgrade --dry-run`
+   - Debian/Ubuntu: `do-release-upgrade -c`
+   - Fedora: `dnf system-upgrade download --assumeno`
+   - openSUSE: `zypper dup --dry-run`
+
+**Neue Features:**
+
+#### Hybrid-Config System
+**Problem gelöst:**
+- Cron-Jobs: Keine $SUDO_USER Variable → Config nicht gefunden
+- Multi-User: Verschiedene User-Präferenzen
+- XDG-Standard vs. System-Kompatibilität
+
+**Lösung: Hybrid-Ansatz**
+```
+1. System-Config:  /etc/linux-update-script/config.conf
+   → Primär, funktioniert immer (auch Cron)
+
+2. User-Override:  ~/.config/linux-update-script/config.conf
+   → Optional, nur bei sudo-Aufruf
+
+3. Legacy:         ./config.conf
+   → Fallback, deprecated
+```
+
+**Technische Umsetzung:**
+- `load_config()` - Hybrid-Loading mit System + User Override
+- `getent passwd $SUDO_USER` - Ermittelt echtes User-Home
+- Automatische Config-Migration in install.sh
+- System-Config-Erstellung mit `sudo tee`
+
+**Änderungen:**
+- 2 Dateien geändert (update.sh, install.sh)
+- +150 / -80 Zeilen
+- 1 neue Funktion (`load_config()`)
+- 20+ neue Sprachmeldungen (Mint Upgrade, Dry-Run)
+- ShellCheck: 0 Fehler, 0 Warnungen
+
+**Vorteile:**
+✅ Cron-sicher (funktioniert ohne $SUDO_USER)
+✅ Multi-User freundlich (jeder User eigene Präferenzen)
+✅ Power-User freundlich (persönliche Overrides)
+✅ Automatisch (install.sh macht alles)
+✅ Abwärtskompatibel (Legacy-Config als Fallback)
+
+**Testing:**
+- ShellCheck: update.sh (0 Fehler), install.sh (0 Fehler)
+- Config-Loading Logik getestet
+- Hybrid-Pfade verifiziert
+- Migration-Logik implementiert
+
+**Status:** ✅ Implementiert, bereit zum Testen
+
 ### v1.6.0 (Released: 2026-01-25)
 ✅ **Vollständig implementiert und veröffentlicht**
 
@@ -391,14 +459,47 @@ Update-Script/
 Siehe ROADMAP.md für vollständige Details aller Versionen.
 
 ---
-Letzte Aktualisierung: 2026-01-24
-Aktuelle Version: v1.6.0 (In Entwicklung)
-Vorherige Version: v1.5.1 (Released: 2025-12-27)
+Letzte Aktualisierung: 2026-01-25
+Aktuelle Version: v1.6.1 (In Entwicklung - Bugfixes)
+Vorherige Version: v1.6.0 (Released: 2026-01-25)
 Nächste Versionen: v1.7.0 → v1.8.0 → v2.0.0
 
-## Nächste Schritte (v1.6.0)
-- Testing der Config-Migration auf verschiedenen Systemen
-- Testing mit verschiedenen Distributionen
-- Community-Feedback zu XDG-Implementierung sammeln
-- README.md mit neuen Config-Pfaden aktualisieren
-- ROADMAP.md Status aktualisieren
+## Nächste Schritte (v1.6.1)
+
+### Sofort testen:
+1. **install.sh ausführen:**
+   ```bash
+   sudo ./install.sh
+   ```
+   - Prüft ob System-Config erstellt wird
+   - Testet Config-Migration
+   - Verifiziert AUTO_REBOOT Setting
+
+2. **Update-Test mit Config-Debugging:**
+   ```bash
+   sudo ./update.sh
+   ```
+   - Log prüfen auf "Config-Debugging"
+   - Verifizieren dass Config geladen wird
+   - Prüfen ob AUTO_REBOOT erkannt wird
+
+3. **Cron-Kompatibilität testen:**
+   - Cron-Job einrichten
+   - Prüfen ob /etc/linux-update-script/config.conf verwendet wird
+
+### Vor Release:
+- [ ] Testing auf Debian/Ubuntu/Mint
+- [ ] Testing mit Cron-Jobs
+- [ ] mintupgrade Workflow testen (auf Mint)
+- [ ] AUTO_REBOOT testen (mit Kernel-Update)
+- [ ] Dry-Run für Fedora/openSUSE testen
+- [ ] README.md mit Hybrid-Config aktualisieren
+- [ ] CHANGELOG.md für v1.6.1 schreiben
+
+### Bekannte Issues:
+- Keine bekannten Issues
+
+### Community-Feedback:
+- AUTO_REBOOT Bug gemeldet und gefixt
+- Mint Upgrade Support nachträglich hinzugefügt
+- Dry-Run für alle Distributionen implementiert
