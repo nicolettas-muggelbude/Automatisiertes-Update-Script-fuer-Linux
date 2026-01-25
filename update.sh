@@ -1480,6 +1480,11 @@ update_debian() {
     fi
 
     apt-get dist-upgrade -y 2>&1 | tee -a "$LOG_FILE"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        log_error "apt-get dist-upgrade fehlgeschlagen"
+        return 1
+    fi
+
     safe_autoremove "apt"
     apt-get autoclean -y 2>&1 | tee -a "$LOG_FILE"
 
