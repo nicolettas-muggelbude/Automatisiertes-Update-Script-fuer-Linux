@@ -159,6 +159,13 @@ if [ "$CONFIG_FILE" = "$OLD_CONFIG_FILE" ] && [ -f "$OLD_CONFIG_FILE" ]; then
     echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_OLD_DEPRECATED"
 fi
 
+# Warnung wenn KEINE Config gefunden wurde
+if [ -z "$CONFIG_FILE" ]; then
+    echo -e "${YELLOW}[${LABEL_WARNING}]${NC} $MSG_CONFIG_NOT_FOUND"
+    echo -e "${YELLOW}[${LABEL_WARNING}]${NC} Verwende Standard-Konfiguration"
+    echo -e "${YELLOW}[${LABEL_WARNING}]${NC} E-Mail- und Desktop-Benachrichtigungen sind möglicherweise nicht konfiguriert!"
+fi
+
 # Timestamp für Logdatei
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 LOG_FILE="${LOG_DIR}/update_${TIMESTAMP}.log"
@@ -225,6 +232,17 @@ send_email() {
     local subject="$1"
     local body="$2"
 
+    # Prüfen ob E-Mail aktiviert
+    if [ "$ENABLE_EMAIL" != "true" ]; then
+        return 0
+    fi
+
+    # Prüfen ob Empfänger konfiguriert
+    if [ -z "$EMAIL_RECIPIENT" ]; then
+        log_warning "E-Mail-Benachrichtigung fehlgeschlagen: EMAIL_RECIPIENT nicht konfiguriert"
+        return 0
+    fi
+
     if [ "$ENABLE_EMAIL" = true ] && [ -n "$EMAIL_RECIPIENT" ]; then
         if command -v mail &> /dev/null; then
             if echo "$body" | mail -s "$subject" "$EMAIL_RECIPIENT" 2>/dev/null; then
@@ -261,6 +279,8 @@ send_notification() {
 
     # notify-send verfügbar?
     if ! command -v notify-send &> /dev/null; then
+        log_warning "Desktop-Benachrichtigung fehlgeschlagen: notify-send nicht installiert"
+        log_warning "Installiere libnotify: sudo apt install libnotify-bin (Debian/Ubuntu)"
         return 0  # Kein Fehler, nur nicht verfügbar
     fi
 
