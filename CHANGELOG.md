@@ -7,7 +7,7 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-## [1.6.0] - 2026-01-24
+## [1.6.0] - 2026-01-25
 
 ### Hinzugefügt
 - **XDG Base Directory Specification**: Konfigurations-Dateien folgen jetzt dem Linux-Standard
@@ -24,24 +24,80 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   1. `~/.config/linux-update-script/config.conf` (XDG, bevorzugt)
   2. `/etc/linux-update-script/config.conf` (system-weit)
   3. `./config.conf` (alt, deprecated seit v1.6.0, entfernt in v2.0.0)
-- **Mehrsprachigkeit**: 8 neue Sprachmeldungen für Config-Migration
-  - Alle Messages in Deutsch (de.lang) und Englisch (en.lang)
-  - MSG_CONFIG_MIGRATE_* - Migrations-Meldungen
-  - MSG_CONFIG_LOCATION - Info über verwendete Config
+- **NVIDIA-Kernel-Kompatibilitätsprüfung**: Verhindert "schwarzen Bildschirm" nach Kernel-Updates
+  - `is_nvidia_installed()` - Erkennt NVIDIA-Treiber (nvidia-smi, lsmod, lspci)
+  - `get_pending_kernel_version()` - Ermittelt verfügbare Kernel-Updates (alle 6 Distributionen)
+  - `check_nvidia_dkms_status()` - Prüft DKMS-Status für neuen Kernel
+  - `check_nvidia_compatibility()` - Hauptfunktion, läuft VOR dem Update
+  - Automatischer DKMS-Rebuild (optional)
+  - Warnung bei Inkompatibilität mit Option zum Abbruch
+- **Secure Boot Support**: MOK-Signierung für NVIDIA DKMS-Module
+  - `is_secureboot_enabled()` - Erkennt Secure Boot (mokutil, bootctl, EFI vars)
+  - `check_mok_keys()` - Prüft ob MOK-Keys enrollt sind
+  - `sign_nvidia_modules()` - Signiert DKMS-Module mit MOK
+  - `handle_secureboot_signing()` - Post-Build Secure Boot Handling
+  - Automatische Modul-Signierung nach DKMS-Rebuild
+  - Unterstützung verschiedener sign-file Tools
+- **Kernel-Hold-Mechanismus**: Sicherer Default bei NVIDIA-Inkompatibilität
+  - `test_dkms_build()` - Testet DKMS-Build VOR dem Update
+  - `hold_kernel_update()` - Hält Kernel-Update zurück (distributionsspezifisch)
+  - Standard: Kernel wird ausgeschlossen wenn NVIDIA inkompatibel
+  - Power-User-Modus: Erlaubt Updates trotz Warnung (NVIDIA_ALLOW_UNSUPPORTED_KERNEL)
+  - Unterstützt: Debian (apt-mark), RHEL (dnf versionlock), openSUSE (zypper addlock)
+  - Manuelle Anleitung für Arch, Solus, Void
+- **Automatische mailutils & DMA Installation in install.sh**
+  - mailutils-Installation für alle 6 Distributionsfamilien
+  - DMA-Installation (DragonFly Mail Agent) für Debian/Ubuntu/Mint
+  - Interaktive Frage mit automatischer Installation
+  - Intelligenter Default: aktueller Username für lokale Mails
+  - Klare Erklärung: lokal vs. extern
+- **Test-Benachrichtigungen in install.sh**
+  - `test_notifications()` - Testet E-Mail und Desktop-Benachrichtigungen
+  - Test-E-Mail mit System-Informationen
+  - Test-Desktop-Benachrichtigung
+  - Sofortiges Feedback ob Benachrichtigungen funktionieren
+- **Mehrsprachigkeit**: 50+ neue Sprachmeldungen (DE + EN)
+  - Config-Migration Messages (8)
+  - NVIDIA-Kompatibilität Messages (16)
+  - Secure Boot & MOK Messages (16)
+  - Kernel-Hold Messages (10)
 
 ### Geändert
-- **install.sh**: Erstellt Config jetzt direkt in `~/.config/linux-update-script/`
-  - Zeigt neuen Konfigurations-Pfad während Installation an
-  - Bietet Migration alter Config an (falls vorhanden)
-  - Keine Änderungen an bestehenden Workflow nötig
-- **update.sh**: Config-Lade-Logik komplett überarbeitet
-  - `find_config_file()` - Sucht Config mit Fallback-Mechanismus
-  - Warnung bei Verwendung alter Config-Location (deprecated)
-  - Info-Meldung im Log über verwendete Config-Datei
-- **README.md**: Dokumentation aktualisiert für neue Config-Location
-  - Installation-Sektion aktualisiert
-  - Neue Config-Pfade dokumentiert
-  - Hinweis auf automatische Migration
+- **install.sh**: Benutzerfreundliche Defaults ("Enter drücken = funktioniert")
+  - E-Mail-Benachrichtigung: Default JA (war: NEIN)
+  - Test-Durchlauf: Default JA (war: NEIN)
+  - Klare Erklärungen vor jeder Frage
+  - Intelligenter E-Mail-Default: aktueller Username
+- **install.sh**: Bessere Logging-Meldungen
+  - Config-Warnung beim Start wenn keine Config vorhanden
+  - Klare Fehlermeldung wenn notify-send fehlt
+  - Warnung wenn EMAIL_RECIPIENT nicht konfiguriert
+- **README.md**: Ausführliche E-Mail-Dokumentation
+  - Übersicht: Lokal vs. Extern (Vergleichstabelle)
+  - Lokale Mails: 4 Optionen zum Lesen (mail, cat, Thunderbird, mutt)
+  - Externe Mails: SMTP-Setup mit Gmail-Beispiel
+  - Troubleshooting (Bounces, Queue, Invalid HELO)
+  - Quick-Start für Einsteiger (3 Schritte)
+- **README.md**: Generische Username-Beispiele
+  - nicole → $USER, dein-username
+  - Verschiedene Beispiele: max, anna, peter
+  - Hinweis dass Username automatisch vorgeschlagen wird
+
+### Behoben
+- **mailutils-Installation** auch wenn DMA/sendmail bereits vorhanden
+  - Problem: DMA installiert sendmail, aber NICHT den mail-Befehl
+  - Lösung: Prüfe nur auf mail-Befehl, nicht auf sendmail
+- **ShellCheck-Fixes** für Secure Boot und NVIDIA-Funktionen
+  - SC2144: Glob-Probleme in EFI-Variablen Prüfung
+  - SC2034: Unbenutzte Variablen entfernt
+  - 0 ShellCheck-Warnungen
+
+### Konfiguration
+- **Neue Config-Parameter:**
+  - `NVIDIA_CHECK_DISABLED` (default: false)
+  - `NVIDIA_AUTO_DKMS_REBUILD` (default: false)
+  - `NVIDIA_ALLOW_UNSUPPORTED_KERNEL` (default: false)
+  - `NVIDIA_AUTO_MOK_SIGN` (default: false)
 
 ### Vorteile
 - ✅ **Für User**: Config bleibt bei Script-Updates erhalten
