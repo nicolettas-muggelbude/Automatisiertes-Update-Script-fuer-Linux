@@ -563,6 +563,86 @@ tail -50 /var/mail/$USER
 sudo rm /var/mail/$USER
 ```
 
+**Option 4: Graphischer Mail-Client (für Desktop-User)**
+
+Lokale Mails können auch mit graphischen Mail-Clients gelesen werden!
+
+**Thunderbird (empfohlen):**
+
+```bash
+# Thunderbird installieren (falls nicht vorhanden)
+sudo apt-get install thunderbird
+
+# Thunderbird starten
+thunderbird
+```
+
+**In Thunderbird einrichten:**
+1. **Menü** → **Datei** → **Neu** → **Vorhandenes E-Mail-Konto**
+2. **Name:** Dein Name (z.B. "Max Mustermann")
+3. **E-Mail-Adresse:** `dein-username@localhost` (z.B. `max@localhost`)
+4. **Passwort:** (leer lassen oder beliebig - wird nicht geprüft)
+5. **Manuell konfigurieren**
+6. **Eingehender Server:**
+   - **Typ:** POP3 oder IMAP
+   - **Server:** `localhost`
+   - **Port:** Leer lassen
+   - **SSL:** Keine
+   - **Authentifizierung:** Keine
+7. **Kontoeinstellungen** → **Server-Einstellungen**
+   - **Lokaler Ordner:** `/var/mail/$USER` (z.B. `/var/mail/max`)
+
+**Evolution (GNOME):**
+
+```bash
+# Evolution installieren
+sudo apt-get install evolution
+
+# Evolution starten
+evolution
+```
+
+**In Evolution einrichten:**
+1. **Bearbeiten** → **Konten** → **Hinzufügen**
+2. **E-Mail-Adresse:** `dein-username@localhost`
+3. **Server-Typ:** Lokaler Mailspool
+4. **Mailbox-Datei:** `/var/mail/$USER`
+
+**KMail (KDE):**
+
+```bash
+# KMail installieren
+sudo apt-get install kmail
+
+# KMail starten
+kmail
+```
+
+**In KMail einrichten:**
+1. **Einstellungen** → **KMail einrichten** → **Zugänge**
+2. **Hinzufügen** → **Lokaler Ordner**
+3. **Speicherort:** `/var/mail/$USER`
+
+**Mutt (Terminal, für Fortgeschrittene):**
+
+```bash
+# Mutt installieren
+sudo apt-get install mutt
+
+# Mutt starten (liest automatisch /var/mail/$USER)
+mutt
+```
+
+**Vorteile graphischer Clients:**
+- ✅ Übersichtliche GUI
+- ✅ Suchfunktion
+- ✅ Sortierung, Filter
+- ✅ Archivierung
+- ✅ Mehrere Mails gleichzeitig verwalten
+- ✅ Anhänge besser anzeigen
+
+**Tipp:** Thunderbird ist am einfachsten und funktioniert auf allen Desktop-Umgebungen!
+
 ### Schritt 3: Test-Mail senden
 
 ```bash
