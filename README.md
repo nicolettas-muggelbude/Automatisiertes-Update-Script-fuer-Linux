@@ -494,7 +494,8 @@ Lokale Mails werden **nicht ins Internet** verschickt, sondern landen direkt in 
 ./install.sh
 
 # Bei der Frage:
-E-Mail-Adresse oder Benutzername [nicole]: nicole ← Einfach Username!
+E-Mail-Adresse oder Benutzername [dein-username]: dein-username ← Einfach Username!
+# Beispiel: Wenn du als "max" eingeloggt bist → max
 ```
 
 Das installiert automatisch:
@@ -511,10 +512,10 @@ mail
 
 # Ausgabe:
 # Mail version 8.1.2 01/15/2001.  Type ? for help.
-# "/var/mail/nicole": 3 messages 2 new
-# >N  1 nicole@hostname  Sat Jan 25 10:30  23/699   Linux Update-Script - Test
-#  N  2 nicole@hostname  Sat Jan 25 11:15  18/543   System-Update erfolgreich
-#    3 nicole@hostname  Sat Jan 25 12:00  21/612   System-Update FEHLGESCHLAGEN
+# "/var/mail/max": 3 messages 2 new
+# >N  1 max@hostname      Sat Jan 25 10:30  23/699   Linux Update-Script - Test
+#  N  2 max@hostname      Sat Jan 25 11:15  18/543   System-Update erfolgreich
+#    3 max@hostname      Sat Jan 25 12:00  21/612   System-Update FEHLGESCHLAGEN
 ```
 
 **Wichtige Befehle im mail-Programm:**
@@ -542,34 +543,34 @@ mail
 **Option 2: Direkt in Mailbox-Datei schauen**
 
 ```bash
-# Mailbox anzeigen
-cat /var/mail/nicole
+# Mailbox anzeigen (ersetze $USER mit deinem Username)
+cat /var/mail/$USER
 
 # Oder mit Pager (scrollbar)
-less /var/mail/nicole
+less /var/mail/$USER
 
 # Neueste Mails anzeigen
-tail -50 /var/mail/nicole
+tail -50 /var/mail/$USER
 ```
 
 **Option 3: Mailbox komplett leeren**
 
 ```bash
-# Alle Mails löschen
-> /var/mail/nicole
+# Alle Mails löschen (ersetze $USER mit deinem Username)
+> /var/mail/$USER
 
 # ODER
-sudo rm /var/mail/nicole
+sudo rm /var/mail/$USER
 ```
 
 ### Schritt 3: Test-Mail senden
 
 ```bash
-# Einfache Test-Mail
-echo "Dies ist ein Test" | mail -s "Test-Betreff" nicole
+# Einfache Test-Mail an dich selbst
+echo "Dies ist ein Test" | mail -s "Test-Betreff" $USER
 
 # Mit mehrzeiligem Text
-mail -s "Mehrzeiliger Test" nicole << EOF
+mail -s "Mehrzeiliger Test" $USER << EOF
 Zeile 1
 Zeile 2
 Zeile 3
@@ -612,7 +613,7 @@ mail
 
 # Config korrigieren
 nano ~/.config/linux-update-script/config.conf
-# EMAIL_RECIPIENT="nicole"  ← Lokaler Username!
+# EMAIL_RECIPIENT="dein-username"  ← Dein lokaler Username!
 ```
 
 ---
@@ -752,7 +753,7 @@ sudo rm -rf /var/spool/dma/*
 
 ### Für normale Heimanwender:
 ```
-✅ Lokale Mails (nicole, root)
+✅ Lokale Mails (dein-username, root)
 ✅ mailutils + DMA
 ✅ Keine SMTP-Konfiguration nötig
 ✅ Mails mit "mail" lesen
@@ -771,10 +772,11 @@ sudo rm -rf /var/spool/dma/*
 ```bash
 # 1. Installation
 ./install.sh
-# Bei E-Mail: nicole eingeben
+# Bei E-Mail: Deinen Benutzernamen eingeben (z.B. max, anna, peter)
+# Tipp: Aktueller Username wird automatisch vorgeschlagen!
 
-# 2. Test-Mail senden
-echo "Test" | mail -s "Test" nicole
+# 2. Test-Mail senden (ersetze mit deinem Username)
+echo "Test" | mail -s "Test" $USER
 
 # 3. Mails lesen
 mail
