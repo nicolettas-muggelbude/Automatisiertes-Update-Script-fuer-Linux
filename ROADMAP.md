@@ -570,6 +570,26 @@ systemctl stop myapp.service
 systemctl start myapp.service
 ```
 
+### 🐧 Fix: Nativer Debian-Upgrade-Support (Issue #8)
+
+**Problem:** Debian-Nutzer sahen fälschlicherweise `[WARNUNG] do-release-upgrade nicht gefunden` — ein Ubuntu-Tool das auf Debian nicht existiert.
+
+**Lösung:** Debian und Ubuntu/MX vollständig getrennt geroutet. Debian bekommt eigene native Funktionen:
+
+- `check_upgrade_debian_native()` — prüft anhand der Codename-Liste ob ein Upgrade verfügbar ist
+- `perform_upgrade_debian_native()` — automatisierter Upgrade-Ablauf:
+  1. Backup `/etc/apt/sources.list.bak.DATUM`
+  2. Codename in `sources.list` + `sources.list.d/` ersetzen (`.list` und `.sources` Formate)
+  3. `apt-get update` (Rollback bei Fehler)
+  4. `apt-get dist-upgrade --simulate` (Dry-Run, Rollback auf Wunsch)
+  5. `DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y`
+  6. `safe_autoremove`
+
+```bash
+DEBIAN_CODENAMES_ORDERED="buster bullseye bookworm trixie"
+# Pending: forky (Debian 14, erwartet ~2027)
+```
+
 ---
 
 ## Version 1.8.0 - Backup & Optimierung
@@ -827,4 +847,4 @@ Features werden priorisiert nach:
 - 🏗️ Migration-Script für User
 - 🏗️ 6 Monate Support für v1.x
 
-Letzte Aktualisierung: 2026-01-24
+Letzte Aktualisierung: 2026-03-13
