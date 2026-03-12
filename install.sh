@@ -605,6 +605,20 @@ ENABLE_DESKTOP_NOTIFICATION=$enable_desktop_notification
 
 # Notification-Dauer in Millisekunden
 NOTIFICATION_TIMEOUT=$notification_timeout
+
+# Hooks aktivieren (true/false) - v1.7.0
+# Pre/Post-Update-Hooks aus /etc/update-hooks/pre.d/ und post.d/
+ENABLE_HOOKS=true
+
+# Hook-Verzeichnis
+HOOKS_DIR="/etc/update-hooks"
+
+# Bei Hook-Fehler Update abbrechen (true/false)
+# Betrifft nur Pre-Update-Hooks
+HOOKS_ABORT_ON_ERROR=false
+
+# Hook-Timeout in Sekunden (Standard: 300)
+HOOKS_TIMEOUT=300
 EOF
 
     if [ -f "$SYSTEM_CONFIG_FILE" ]; then
@@ -644,6 +658,90 @@ EOF
     else
         print_info "Log-Verzeichnis existiert bereits: $log_dir"
     fi
+}
+
+# Hook-Verzeichnisse einrichten
+setup_hooks() {
+    print_header
+    echo -e "${GREEN}Hook-System Einrichtung (v1.7.0)${NC}\n"
+
+    echo "Hooks erlauben das Ausführen eigener Scripts vor und nach Updates."
+    echo "Beispiele: Services stoppen/starten, Backups erstellen, Monitoring pausieren."
+    echo
+    echo "Hook-Verzeichnisse:"
+    echo "  /etc/update-hooks/pre.d/   (vor dem Update)"
+    echo "  /etc/update-hooks/post.d/  (nach dem Update)"
+    echo
+    if ! ask_yes_no "Möchtest du die Hook-Verzeichnisse jetzt erstellen?" "y"; then
+        print_info "Hook-Einrichtung übersprungen"
+        return
+    fi
+
+    local hooks_base="/etc/update-hooks"
+
+    # Verzeichnisse erstellen
+    if sudo mkdir -p "${hooks_base}/pre.d" "${hooks_base}/post.d" 2>/dev/null; then
+        print_info "Hook-Verzeichnisse erstellt:"
+        print_info "  ${hooks_base}/pre.d/"
+        print_info "  ${hooks_base}/post.d/"
+    else
+        print_error "Fehler beim Erstellen der Hook-Verzeichnisse"
+        return
+    fi
+
+    # Beispiel-Hooks installieren?
+    echo
+    if ask_yes_no "Beispiel-Hooks installieren (als Vorlage)?" "y"; then
+
+        # Beispiel Pre-Hook
+        sudo tee "${hooks_base}/pre.d/10-example.sh" > /dev/null << 'HOOKEOF'
+#!/bin/bash
+# Beispiel Pre-Update-Hook
+# Wird VOR dem Update ausgeführt
+#
+# Verwendung:
+#   - Services stoppen
+#   - Backups erstellen
+#   - Monitoring pausieren
+#
+# Exit-Code 0 = Erfolg
+# Exit-Code != 0 = Fehler (Update wird abgebrochen wenn HOOKS_ABORT_ON_ERROR=true)
+
+# Beispiel: Service stoppen
+# systemctl stop myapp.service
+
+echo "[HOOK] Pre-Update-Beispiel ausgeführt"
+exit 0
+HOOKEOF
+        sudo chmod +x "${hooks_base}/pre.d/10-example.sh"
+
+        # Beispiel Post-Hook
+        sudo tee "${hooks_base}/post.d/90-example.sh" > /dev/null << 'HOOKEOF'
+#!/bin/bash
+# Beispiel Post-Update-Hook
+# Wird NACH dem Update ausgeführt (auch bei Fehlern)
+#
+# Verwendung:
+#   - Services starten
+#   - Monitoring reaktivieren
+#   - Cleanup durchführen
+
+# Beispiel: Service starten
+# systemctl start myapp.service
+
+echo "[HOOK] Post-Update-Beispiel ausgeführt"
+exit 0
+HOOKEOF
+        sudo chmod +x "${hooks_base}/post.d/90-example.sh"
+
+        print_info "Beispiel-Hooks installiert:"
+        print_info "  ${hooks_base}/pre.d/10-example.sh"
+        print_info "  ${hooks_base}/post.d/90-example.sh"
+        echo
+        print_info "Eigene Hooks anlegen: Dateien mit .sh-Endung in pre.d/ oder post.d/"
+        print_info "Hooks werden alphabetisch ausgeführt (10-... vor 20-... vor 90-...)"
+    fi
+    echo
 }
 
 # Cron-Job einrichten
@@ -1030,6 +1128,10 @@ fi
 
 # Installation durchführen
 create_config
+echo
+read -r -p "Drücke Enter zum Fortfahren..."
+
+setup_hooks
 echo
 read -r -p "Drücke Enter zum Fortfahren..."
 

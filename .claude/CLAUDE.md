@@ -4,15 +4,16 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot (Released: 2026-01-25)
+v1.7.0 - Hooks & Automation (Released: 2026-03-13)
 
 ## Vorherige Versionen
+- v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot (Released: 2026-01-25)
 - v1.5.1 - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
 - v1.5.0 - Upgrade-Check System (Released: 2025-12-27)
 - v1.4.0 - ShellCheck-Warnungen behoben, Kernel-Schutz implementiert
 
 ## Nächste Version
-v1.7.0 - Hooks & Automation (geplant)
+v1.8.0 - Backup & Optimierung (geplant)
 
 ## Projekt-Struktur
 ```

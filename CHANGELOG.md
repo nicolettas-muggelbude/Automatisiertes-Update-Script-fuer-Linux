@@ -7,6 +7,39 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-03-13
+
+### Hinzugefügt
+- **Hook-System**: Pre/Post-Update-Hooks für eigene Scripts
+  - `run_pre_update_hooks()` - Führt Scripts vor dem Update aus
+  - `run_post_update_hooks()` - Führt Scripts nach dem Update aus (auch bei Fehler)
+  - Hook-Verzeichnisse: `/etc/update-hooks/pre.d/` und `/etc/update-hooks/post.d/`
+  - Alphabetische Ausführung (10-... vor 20-... vor 90-...)
+  - Timeout-Unterstützung (Standard: 300 Sekunden, konfigurierbar)
+  - Exit-Code-Handling: optionaler Abbruch bei Hook-Fehler (`HOOKS_ABORT_ON_ERROR`)
+  - Graceful Handling: nicht ausführbare Dateien werden übersprungen
+  - Vollständiges Logging aller Hook-Ausführungen
+- **Hook-Unterstützung für Upgrade-Modus**: Pre/Post-Hooks laufen auch bei `--upgrade`
+- **setup_hooks() in install.sh**: Interaktive Einrichtung der Hook-Infrastruktur
+  - Erstellt Hook-Verzeichnisse `/etc/update-hooks/pre.d/` und `post.d/`
+  - Installiert kommentierte Beispiel-Hooks als Vorlage
+- **4 neue Konfigurationsparameter**:
+  - `ENABLE_HOOKS=true` - Hooks aktivieren/deaktivieren
+  - `HOOKS_DIR="/etc/update-hooks"` - Hook-Verzeichnis
+  - `HOOKS_ABORT_ON_ERROR=false` - Update abbrechen bei Pre-Hook-Fehler
+  - `HOOKS_TIMEOUT=300` - Timeout pro Hook in Sekunden
+- **30 neue Sprachmeldungen** (DE + EN):
+  - Hook-Start, Ausführung, Erfolg, Fehler
+  - Timeout-Meldungen
+  - Verzeichnis-Meldungen
+  - Abbruch-Meldungen
+
+### Use Cases
+- Services vor Update stoppen, nach Update starten
+- Backups vor kritischen Updates erstellen
+- Monitoring vor Update pausieren, danach reaktivieren
+- Custom Cleanup nach Updates
+
 ## [1.6.0] - 2026-01-25
 
 ### Hinzugefügt

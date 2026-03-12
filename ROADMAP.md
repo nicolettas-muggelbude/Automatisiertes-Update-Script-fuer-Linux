@@ -535,54 +535,37 @@ fi
 
 ---
 
-## Version 1.7.0 - Hooks & Automation
+## Version 1.7.0 - Hooks & Automation ✅
+
+**Status:** ✅ Implementiert (Released: 2026-03-13)
 
 ### 🪝 Pre/Post-Update Hooks
 
-**Motivation:**
-User möchten eigene Scripts vor und nach Updates ausführen können (z.B. Services stoppen, Backups erstellen, Monitoring pausieren).
-
-#### 1. Hook-System
-
-**Funktionen:**
-- `run_pre_update_hooks()` - Führt Scripts vor Update aus
-- `run_post_update_hooks()` - Führt Scripts nach Update aus
+**Implementierte Features:**
+- `run_single_hook()` - Einzelnen Hook ausführen (mit Timeout)
+- `run_hooks()` - Alle Hooks in einem Verzeichnis (alphabetisch)
+- `run_pre_update_hooks()` - Führt Pre-Hooks vor Update aus
+- `run_post_update_hooks()` - Führt Post-Hooks nach Update aus
 - Hook-Verzeichnisse: `/etc/update-hooks/pre.d/` und `/etc/update-hooks/post.d/`
+- Alphabetische Ausführung (10-... vor 20-... vor 90-...)
+- Timeout-Unterstützung (Standard: 300 Sekunden)
+- `HOOKS_ABORT_ON_ERROR` - Optionaler Abbruch bei Pre-Hook-Fehler
+- Graceful: nicht ausführbare Dateien werden übersprungen
+- Vollständiges Logging
 
-**Features:**
-- Scripts in alphabetischer Reihenfolge ausführen
-- Exit-Code-Handling (bei Fehler abbrechen?)
-- Timeout für Hooks
-- Logging aller Hook-Ausführungen
-
-#### 2. Konfiguration
-
+**Konfiguration:**
 ```bash
-# Hooks aktivieren (true/false)
 ENABLE_HOOKS=true
-
-# Hook-Verzeichnis
 HOOKS_DIR="/etc/update-hooks"
-
-# Bei Hook-Fehler abbrechen (true/false)
 HOOKS_ABORT_ON_ERROR=false
-
-# Hook-Timeout in Sekunden
 HOOKS_TIMEOUT=300
 ```
 
-#### 3. Beispiel-Hooks
-
-**Pre-Update Hook (Service stoppen):**
+**Beispiel-Hooks:**
 ```bash
-#!/bin/bash
 # /etc/update-hooks/pre.d/10-stop-services.sh
 systemctl stop myapp.service
-```
 
-**Post-Update Hook (Service starten):**
-```bash
-#!/bin/bash
 # /etc/update-hooks/post.d/90-start-services.sh
 systemctl start myapp.service
 ```
@@ -826,7 +809,7 @@ Features werden priorisiert nach:
 - **v1.5.0** ✅ - Upgrade-Check System & Kernel-Schutz (Released: 2025-12-27)
 - **v1.5.1** ✅ - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
 - **v1.6.0** ✅ - **XDG-Konformität, Config-Migration & NVIDIA-Prüfung** (Implementiert: 2026-01-24)
-- **v1.7.0** 📋 - Hooks & Automation (Pre/Post-Update Hooks)
+- **v1.7.0** ✅ - Hooks & Automation (Pre/Post-Update Hooks) (Released: 2026-03-13)
 - **v1.8.0** 📋 - Backup-Integration & Optimierungen
 - **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
 

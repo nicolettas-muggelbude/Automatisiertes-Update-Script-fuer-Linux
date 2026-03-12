@@ -50,6 +50,12 @@ NVIDIA_ALLOW_UNSUPPORTED_KERNEL=false
 NVIDIA_AUTO_DKMS_REBUILD=false
 NVIDIA_AUTO_MOK_SIGN=false
 
+# Hooks (v1.7.0)
+ENABLE_HOOKS=true
+HOOKS_DIR="/etc/update-hooks"
+HOOKS_ABORT_ON_ERROR=false
+HOOKS_TIMEOUT=300
+
 # Config-Migration Funktion (wird nach load_language aufgerufen)
 migrate_config() {
     local needs_migration=false
@@ -371,6 +377,121 @@ send_notification() {
             --expire-time="$timeout" \
             "$title" "$message" 2>/dev/null || true
     fi
+}
+
+#############################################################
+# Hook-System (v1.7.0)
+#############################################################
+
+# Einzelnen Hook ausführen (mit Timeout)
+run_single_hook() {
+    local hook_file="$1"
+    local hook_name
+    hook_name=$(basename "$hook_file")
+    local hook_timeout="${HOOKS_TIMEOUT:-300}"
+    local exit_code=0
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_HOOKS_RUNNING" "$hook_name")"
+
+    # Ausführbar?
+    if [ ! -x "$hook_file" ]; then
+        # shellcheck disable=SC2059
+        log_warning "$(printf "$MSG_HOOKS_NOT_EXECUTABLE" "$hook_name")"
+        return 0  # Überspringen, kein Fehler
+    fi
+
+    # Ausführen (mit timeout falls verfügbar)
+    if command -v timeout &> /dev/null; then
+        timeout "$hook_timeout" "$hook_file" 2>&1 | tee -a "$LOG_FILE"
+        exit_code="${PIPESTATUS[0]}"
+
+        if [ "$exit_code" -eq 124 ]; then
+            # shellcheck disable=SC2059
+            log_error "$(printf "$MSG_HOOKS_TIMEOUT" "$hook_name" "$hook_timeout")"
+            return 1
+        fi
+    else
+        "$hook_file" 2>&1 | tee -a "$LOG_FILE"
+        exit_code="${PIPESTATUS[0]}"
+    fi
+
+    if [ "$exit_code" -ne 0 ]; then
+        # shellcheck disable=SC2059
+        log_error "$(printf "$MSG_HOOKS_FAILED" "$hook_name" "$exit_code")"
+        return 1
+    fi
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_HOOKS_SUCCESS" "$hook_name")"
+    return 0
+}
+
+# Alle Hooks in einem Verzeichnis ausführen (alphabetisch)
+run_hooks() {
+    local hooks_dir="$1"
+
+    # Hooks aktiviert?
+    if [ "${ENABLE_HOOKS:-true}" != "true" ]; then
+        log_info "$MSG_HOOKS_DISABLED"
+        return 0
+    fi
+
+    # Verzeichnis vorhanden?
+    if [ ! -d "$hooks_dir" ]; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_HOOKS_DIR_NOT_FOUND" "$hooks_dir")"
+        return 0
+    fi
+
+    local hook_count=0
+    local error_count=0
+
+    # Alle .sh-Dateien alphabetisch ausführen
+    while IFS= read -r -d '' hook_file; do
+        hook_count=$((hook_count + 1))
+
+        if ! run_single_hook "$hook_file"; then
+            error_count=$((error_count + 1))
+
+            # Bei Fehler abbrechen?
+            if [ "${HOOKS_ABORT_ON_ERROR:-false}" = "true" ]; then
+                # shellcheck disable=SC2059
+                log_error "$(printf "$MSG_HOOKS_ABORT_ON_ERROR" "$(basename "$hook_file")")"
+                return 1
+            fi
+        fi
+    done < <(find "$hooks_dir" -maxdepth 1 -name "*.sh" -type f -print0 | sort -z)
+
+    if [ "$hook_count" -eq 0 ]; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_HOOKS_NONE_FOUND" "$hooks_dir")"
+        return 0
+    fi
+
+    if [ "$error_count" -gt 0 ]; then
+        # shellcheck disable=SC2059
+        log_warning "$(printf "$MSG_HOOKS_COMPLETED_WITH_ERRORS" "$hook_count" "$error_count")"
+    else
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_HOOKS_ALL_SUCCESS" "$hook_count")"
+    fi
+
+    return 0
+}
+
+# Pre-Update-Hooks ausführen
+run_pre_update_hooks() {
+    local hooks_dir="${HOOKS_DIR:-/etc/update-hooks}/pre.d"
+    log_info "$MSG_HOOKS_PRE_START"
+    run_hooks "$hooks_dir"
+}
+
+# Post-Update-Hooks ausführen
+run_post_update_hooks() {
+    local hooks_dir="${HOOKS_DIR:-/etc/update-hooks}/post.d"
+    log_info "$MSG_HOOKS_POST_START"
+    run_hooks "$hooks_dir"
 }
 
 # Zählt stabile Kernel-Versionen (Debian/Ubuntu)
@@ -1107,6 +1228,160 @@ $MSG_UPGRADE_BACKUP_WARNING"
     return 0
 }
 
+# Bekannte Debian-Releases in Reihenfolge (nur stabile Versionen)
+# Wird bei neuen Releases aktualisiert
+DEBIAN_CODENAMES_ORDERED="buster bullseye bookworm trixie"
+
+# Ermittelt den nächsten Debian-Codename
+get_next_debian_codename() {
+    local current="$1"
+    local prev=""
+
+    for codename in $DEBIAN_CODENAMES_ORDERED; do
+        if [ "$prev" = "$current" ]; then
+            echo "$codename"
+            return 0
+        fi
+        prev="$codename"
+    done
+
+    echo ""
+    return 1
+}
+
+# Debian Upgrade-Check (natives Debian ohne do-release-upgrade)
+check_upgrade_debian_native() {
+    log_info "$MSG_UPGRADE_CHECKING_DEBIAN"
+
+    local current_codename
+    current_codename=$(grep "^VERSION_CODENAME=" /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
+
+    if [ -z "$current_codename" ]; then
+        log_warning "Kann Debian-Codename nicht ermitteln"
+        return 1
+    fi
+
+    local next_codename
+    next_codename=$(get_next_debian_codename "$current_codename")
+
+    if [ -z "$next_codename" ]; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_UPGRADE_DEBIAN_NOT_AVAILABLE" "$current_codename")"
+        return 0
+    fi
+
+    # Upgrade verfügbar
+    # shellcheck disable=SC2059
+    printf "$MSG_UPGRADE_AVAILABLE\n" "Debian $current_codename" "Debian $next_codename" | tee -a "$LOG_FILE"
+
+    # E-Mail-Benachrichtigung
+    if [ "$UPGRADE_NOTIFY_EMAIL" = true ]; then
+        local email_body="$EMAIL_BODY_UPGRADE
+
+Aktuelle Version: Debian $current_codename
+Neue Version: Debian $next_codename
+
+Für Upgrade ausführen:
+sudo $0 --upgrade
+
+$MSG_UPGRADE_BACKUP_WARNING"
+        send_email "$EMAIL_SUBJECT_UPGRADE" "$email_body"
+    fi
+
+    return 3
+}
+
+# Debian Upgrade durchführen (natives Debian)
+perform_upgrade_debian_native() {
+    local current_codename
+    current_codename=$(grep "^VERSION_CODENAME=" /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
+
+    local next_codename
+    next_codename=$(get_next_debian_codename "$current_codename")
+
+    if [ -z "$next_codename" ]; then
+        log_error "$MSG_UPGRADE_NOT_AVAILABLE"
+        return 1
+    fi
+
+    # shellcheck disable=SC2059
+    printf "$MSG_UPGRADE_START\n" "Debian $next_codename" | tee -a "$LOG_FILE"
+
+    # Schritt 1: APT-Quellen sichern
+    local sources_backup
+    sources_backup="/etc/apt/sources.list.bak.$(date +%Y%m%d-%H%M%S)"
+    if cp /etc/apt/sources.list "$sources_backup" 2>/dev/null; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_UPGRADE_DEBIAN_SOURCES_BACKUP" "$sources_backup")"
+    else
+        log_error "$MSG_UPGRADE_DEBIAN_SOURCES_BACKUP_FAILED"
+        return 1
+    fi
+
+    # Schritt 2: Codename in sources.list und sources.list.d ersetzen
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_UPGRADE_DEBIAN_SOURCES_UPDATE" "$current_codename" "$next_codename")"
+
+    if ! sed -i "s/${current_codename}/${next_codename}/g" /etc/apt/sources.list; then
+        log_error "Fehler beim Aktualisieren von /etc/apt/sources.list"
+        cp "$sources_backup" /etc/apt/sources.list
+        return 1
+    fi
+
+    # sources.list.d aktualisieren (beide Formate: .list und .sources/deb822)
+    if [ -d /etc/apt/sources.list.d/ ]; then
+        find /etc/apt/sources.list.d/ -type f \( -name "*.list" -o -name "*.sources" \) \
+            -exec sed -i "s/${current_codename}/${next_codename}/g" {} \; 2>/dev/null || true
+    fi
+
+    # Schritt 3: apt-get update
+    log_info "$MSG_UPGRADE_REFRESH_REPOS"
+    if ! apt-get update 2>&1 | tee -a "$LOG_FILE"; then
+        log_error "$MSG_UPGRADE_REFRESH_FAILED"
+        # shellcheck disable=SC2059
+        log_warning "$(printf "$MSG_UPGRADE_DEBIAN_SOURCES_RESTORE" "$sources_backup")"
+        cp "$sources_backup" /etc/apt/sources.list
+        if [ -d /etc/apt/sources.list.d/ ]; then
+            find /etc/apt/sources.list.d/ -type f \( -name "*.list" -o -name "*.sources" \) \
+                -exec sed -i "s/${next_codename}/${current_codename}/g" {} \; 2>/dev/null || true
+        fi
+        return 1
+    fi
+
+    # Schritt 4: Dry-Run
+    log_info "$MSG_UPGRADE_DRY_RUN_START"
+    if ! apt-get dist-upgrade --simulate 2>&1 | tee -a "$LOG_FILE"; then
+        log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
+        echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
+        read -r response
+        if [[ ! "$response" =~ ^[jJyY]$ ]]; then
+            log_info "$MSG_UPGRADE_CANCELLED"
+            # shellcheck disable=SC2059
+            log_warning "$(printf "$MSG_UPGRADE_DEBIAN_SOURCES_RESTORE" "$sources_backup")"
+            cp "$sources_backup" /etc/apt/sources.list
+            if [ -d /etc/apt/sources.list.d/ ]; then
+                find /etc/apt/sources.list.d/ -type f \( -name "*.list" -o -name "*.sources" \) \
+                    -exec sed -i "s/${next_codename}/${current_codename}/g" {} \; 2>/dev/null || true
+            fi
+            apt-get update 2>/dev/null | tee -a "$LOG_FILE"
+            return 1
+        fi
+    else
+        log_info "$MSG_UPGRADE_DRY_RUN_OK"
+    fi
+
+    # Schritt 5: Upgrade durchführen
+    log_info "$MSG_UPGRADE_PERFORMING"
+    if DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y 2>&1 | tee -a "$LOG_FILE"; then
+        safe_autoremove "apt"
+        log_info "$MSG_UPGRADE_SUCCESS"
+        return 0
+    else
+        log_error "$MSG_UPGRADE_FAILED"
+        return 1
+    fi
+}
+
 # Linux Mint Upgrade-Check
 check_upgrade_mint() {
     log_info "$MSG_UPGRADE_CHECKING_MINT"
@@ -1225,7 +1500,11 @@ check_upgrade_available() {
             check_upgrade_mint
             return $?
             ;;
-        debian|ubuntu|mx)
+        debian)
+            check_upgrade_debian_native
+            return $?
+            ;;
+        ubuntu|mx)
             check_upgrade_debian
             return $?
             ;;
@@ -1312,7 +1591,11 @@ perform_upgrade() {
                 return 1
             fi
             ;;
-        debian|ubuntu|mx)
+        debian)
+            perform_upgrade_debian_native
+            return $?
+            ;;
+        ubuntu|mx)
             # MX-Linux hat kein do-release-upgrade
             if echo "$DISTRO" | grep -qi "mx"; then
                 log_error "MX-Linux: Keine automatischen Distribution-Upgrades verfügbar"
@@ -1320,7 +1603,7 @@ perform_upgrade() {
                 return 1
             fi
 
-            # Debian/Ubuntu: do-release-upgrade verwenden
+            # Ubuntu: do-release-upgrade verwenden
             if ! command -v do-release-upgrade &> /dev/null; then
                 log_error "do-release-upgrade nicht gefunden"
                 return 1
@@ -1755,13 +2038,22 @@ detect_distro
 # NVIDIA-Kernel-Kompatibilität prüfen (VOR dem Update!)
 check_nvidia_compatibility
 
+# Pre-Update-Hooks ausführen
+if ! run_pre_update_hooks; then
+    log_error "$MSG_HOOKS_PRE_ABORT"
+    send_email "$EMAIL_SUBJECT_FAILED" "$MSG_HOOKS_PRE_ABORT"
+    exit 1
+fi
+
 # Wenn Upgrade-Modus, führe Upgrade durch
 if [ "$UPGRADE_MODE" = true ]; then
     if perform_upgrade; then
+        run_post_update_hooks
         log_info "$MSG_UPGRADE_SUCCESS"
         send_email "$EMAIL_SUBJECT_UPGRADE" "$MSG_UPGRADE_SUCCESS"
         exit 0
     else
+        run_post_update_hooks
         log_error "$MSG_UPGRADE_FAILED"
         send_email "$EMAIL_SUBJECT_FAILED" "$MSG_UPGRADE_FAILED"
         exit 1
@@ -1796,6 +2088,9 @@ case "$DISTRO" in
         exit 1
         ;;
 esac
+
+# Post-Update-Hooks ausführen (immer, unabhängig vom Ergebnis)
+run_post_update_hooks
 
 # Ergebnis auswerten
 if [ "$UPDATE_SUCCESS" = true ]; then
