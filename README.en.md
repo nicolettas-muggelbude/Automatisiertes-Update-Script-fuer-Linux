@@ -19,6 +19,10 @@ Automated update script for various Linux distributions with optional email noti
 
 ## Features
 
+- ✅ **Hooks & Automation**: Pre/Post-Update hooks for services, backups, monitoring (v1.7.0)
+- ✅ **Debian Native Upgrade**: Automated Debian version upgrades without external tools (v1.7.0)
+- ✅ **NVIDIA Compatibility Check**: DKMS check, Kernel Hold, Secure Boot (v1.6.0)
+- ✅ **XDG Compliance**: Config in `~/.config/` standard directory (v1.6.0)
 - ✅ **Multi-language Support**: German and English (additional languages via community)
 - ✅ **Desktop Notifications**: Popup notifications for updates, upgrades, errors (v1.5.1)
 - ✅ **Upgrade Check System**: Automatic detection of available distribution upgrades (v1.5.0)
@@ -195,7 +199,11 @@ The installation script guides you interactively through setup:
    - Default: `/var/log/system-updates`
    - Script creates directory with sudo if needed
 
-4. **Set up Cron Job** (optional)
+4. **Hook Directories** (v1.7.0)
+   - Creates `/etc/update-hooks/pre.d/` and `/etc/update-hooks/post.d/`
+   - Installs commented example hooks as templates
+
+5. **Set up Cron Job** (optional)
    - Daily at 3:00 AM
    - Weekly (Sunday, 3:00 AM)
    - Monthly (1st of month, 3:00 AM)
@@ -287,7 +295,8 @@ Do you want to perform the upgrade? [y/N]: y
 
 #### Supported Distribution Upgrades
 
-- **Debian/Ubuntu**: Detects new release versions (e.g. Ubuntu 22.04 → 24.04)
+- **Debian**: Native upgrade workflow without external tools (bookworm → trixie etc.)
+- **Ubuntu**: Detects new release versions via do-release-upgrade (e.g. 22.04 → 24.04)
 - **Linux Mint**: Detects new Mint versions with mintupgrade
 - **Fedora**: Detects new Fedora versions (e.g. Fedora 39 → 40)
 - **Arch/Manjaro**: Checks for important updates (Rolling Release)
@@ -437,6 +446,19 @@ ENABLE_DESKTOP_NOTIFICATION=true
 
 # Notification duration in milliseconds
 NOTIFICATION_TIMEOUT=5000
+
+# Hooks (v1.7.0)
+# Enable hooks (true/false)
+ENABLE_HOOKS=true
+
+# Hook directory
+HOOKS_DIR="/etc/update-hooks"
+
+# Abort update if pre-hook fails (true/false)
+HOOKS_ABORT_ON_ERROR=false
+
+# Timeout per hook in seconds
+HOOKS_TIMEOUT=300
 ```
 
 ### Change Configuration
@@ -1400,14 +1422,13 @@ For problems or questions:
 
 The complete version history can be found in the [CHANGELOG.md](CHANGELOG.md) file.
 
-### Current Version: 1.6.0 (2026-01-25) - XDG Compliance & NVIDIA Secure Boot
+### Current Version: 1.7.0 (2026-03-13) - Hooks & Automation + Debian Native Upgrade
 
 **Highlights:**
-- ✅ **NEW: XDG Compliance** - Config files now in standard directory
-- ✅ **NEW: NVIDIA Secure Boot Support** - MOK signing for NVIDIA drivers
-- ✅ **NEW: Kernel Hold Mechanism** - Safe defaults for NVIDIA incompatibility
-- ✅ **NEW: User-Friendly Defaults** - Automatic installation, better defaults
-- ✅ **NEW: Comprehensive Documentation** - Email setup explained for beginners
+- ✅ **NEW: Hooks System** - Pre/Post-Update hooks for services, backups, monitoring
+- ✅ **NEW: Debian Native Upgrade** - Automated version upgrades without external tools
+- ✅ XDG Compliance (v1.6.0)
+- ✅ NVIDIA Secure Boot & Kernel Hold (v1.6.0)
 - ✅ Desktop Notifications (v1.5.1)
 - ✅ Upgrade Check System (v1.5.0)
 - ✅ Kernel Protection (v1.5.0)

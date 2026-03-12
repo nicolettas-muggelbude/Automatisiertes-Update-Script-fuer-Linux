@@ -19,10 +19,14 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 
 ## Features
 
-- ✅ **Mehrsprachigkeit**: Deutsch und Englisch (weitere Sprachen via Community)
+- ✅ **Hooks & Automation**: Eigene Scripts vor/nach Updates (Pre/Post-Hooks) (v1.7.0)
+- ✅ **Debian Upgrade**: Automatischer nativer Upgrade-Workflow (bookworm → trixie) (v1.7.0)
+- ✅ **NVIDIA-Kompatibilitätsprüfung**: Verhindert schwarzen Bildschirm nach Kernel-Updates (v1.6.0)
+- ✅ **XDG-Config**: Konfiguration in `~/.config/` – bleibt bei `git pull` erhalten (v1.6.0)
 - ✅ **Desktop-Benachrichtigungen**: Popup-Notifications für Updates, Upgrades, Fehler (v1.5.1)
 - ✅ **Upgrade-Check System**: Automatische Erkennung verfügbarer Distribution-Upgrades (v1.5.0)
 - ✅ **Kernel-Schutz**: Verhindert versehentliches Entfernen von Fallback-Kerneln (v1.5.0)
+- ✅ **Mehrsprachigkeit**: Deutsch und Englisch (weitere Sprachen via Community)
 - ✅ Automatische Distribution-Erkennung
 - ✅ Vollautomatische System-Updates
 - ✅ Detailliertes Logging mit Zeitstempel
@@ -195,7 +199,11 @@ Das Installations-Script führt dich interaktiv durch die Einrichtung:
    - Standard: `/var/log/system-updates`
    - Script legt Verzeichnis mit sudo an, falls nötig
 
-4. **Cron-Job einrichten** (optional)
+4. **Hook-Verzeichnisse einrichten** (NEU in v1.7.0)
+   - Erstellt `/etc/update-hooks/pre.d/` und `post.d/`
+   - Installiert Beispiel-Hooks als Vorlage
+
+5. **Cron-Job einrichten** (optional)
    - Täglich um 3:00 Uhr
    - Wöchentlich (Sonntag, 3:00 Uhr)
    - Monatlich (1. des Monats, 3:00 Uhr)
@@ -287,7 +295,8 @@ Möchtest du das Upgrade durchführen? [j/N]: j
 
 #### Unterstützte Distribution-Upgrades
 
-- **Debian/Ubuntu**: Erkennt neue Release-Versionen (z.B. Ubuntu 22.04 → 24.04)
+- **Debian**: Nativer Upgrade-Workflow ohne externe Tools (bookworm → trixie → ...) (v1.7.0)
+- **Ubuntu/Mint**: Erkennt neue Release-Versionen via `do-release-upgrade`
 - **Fedora**: Erkennt neue Fedora-Versionen (z.B. Fedora 39 → 40)
 - **Arch/Manjaro**: Prüft auf wichtige Updates (Rolling Release)
 - **Solus**: Prüft auf ausstehende Updates (Rolling Release)
@@ -414,18 +423,16 @@ LOG_DIR="/var/log/system-updates"
 AUTO_REBOOT=false
 
 # Kernel-Schutz (true/false)
-# Verhindert autoremove wenn zu wenige Kernel installiert sind
 KERNEL_PROTECTION=true
 
 # Minimale Anzahl stabiler Kernel (Standard: 3)
 MIN_KERNELS=3
 
 # Upgrade-Check aktivieren (true/false)
-# Prüft nach regulären Updates, ob Distribution-Upgrades verfügbar sind
 ENABLE_UPGRADE_CHECK=true
 
 # Automatisches Upgrade durchführen (true/false)
-# WARNUNG: Kann Breaking Changes verursachen! Nur für erfahrene User
+# WARNUNG: Kann Breaking Changes verursachen!
 AUTO_UPGRADE=false
 
 # Upgrade-Benachrichtigungen per E-Mail (true/false)
@@ -436,6 +443,20 @@ ENABLE_DESKTOP_NOTIFICATION=true
 
 # Notification-Dauer in Millisekunden
 NOTIFICATION_TIMEOUT=5000
+
+# --- Hooks (v1.7.0) ---
+
+# Hooks aktivieren (true/false)
+ENABLE_HOOKS=true
+
+# Hook-Verzeichnis
+HOOKS_DIR="/etc/update-hooks"
+
+# Update abbrechen wenn Pre-Hook fehlschlägt (true/false)
+HOOKS_ABORT_ON_ERROR=false
+
+# Timeout pro Hook in Sekunden
+HOOKS_TIMEOUT=300
 ```
 
 ### Konfiguration ändern
@@ -1399,28 +1420,16 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.5.1 (2025-12-27) - Desktop-Benachrichtigungen & DMA
+### Aktuelle Version: 1.7.0 (2026-03-13) - Hooks & Automation + Debian Upgrade
 
 **Highlights:**
-- ✅ **NEU: Desktop-Benachrichtigungen** - Popup-Notifications für wichtige Events
-  - Benachrichtigungen bei Update-Erfolg, Upgrade verfügbar, Fehler, Neustart
-  - Funktioniert automatisch auch als root
-  - Unterstützt GNOME, KDE, XFCE, Cinnamon, MATE, LXQt, Budgie
-- ✅ **NEU: DMA-Empfehlung** - Einfachste Lösung für E-Mail-Benachrichtigungen
-  - Keine Konfiguration nötig
-  - Kein laufender Dienst, kein offener Port
-  - Perfekt für lokale Mails
+- ✅ **NEU: Hook-System** – eigene Scripts vor/nach Updates (`/etc/update-hooks/pre.d/`, `post.d/`)
+- ✅ **NEU: Nativer Debian-Upgrade** – automatischer Workflow ohne Ubuntu-Tools
+- ✅ NVIDIA-Kompatibilitätsprüfung mit Secure Boot & Kernel-Hold (v1.6.0)
+- ✅ XDG-konforme Config in `~/.config/` (v1.6.0)
+- ✅ Desktop-Benachrichtigungen (v1.5.1)
 - ✅ Upgrade-Check System (v1.5.0)
 - ✅ Kernel-Schutz (v1.5.0)
 - ✅ ShellCheck-konform (keine Warnungen)
-
-**Version 1.4.0:**
-- ✅ ShellCheck-Warnungen behoben
-- ✅ Code-Qualität verbessert
-
-**Version 1.3.0:**
-- ✅ Solus Unterstützung (Community Beitrag von @mrtoadie)
-- ✅ Void Linux Unterstützung (Community Beitrag von @tbreswald)
-- ✅ GitHub Repository professionell eingerichtet
 
 **Siehe [CHANGELOG.md](CHANGELOG.md) für alle Details**
