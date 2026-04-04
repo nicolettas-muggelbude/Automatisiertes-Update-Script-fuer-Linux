@@ -56,6 +56,17 @@ HOOKS_DIR="/etc/update-hooks"
 HOOKS_ABORT_ON_ERROR=false
 HOOKS_TIMEOUT=300
 
+# Backup (v1.8.0)
+ENABLE_BACKUP=false
+BACKUP_METHOD="rsync"
+BACKUP_TARGET="/backup/system"
+BACKUP_RETENTION=3
+BACKUP_BEFORE_UPGRADE=true
+
+# Load-Check (v1.8.0)
+UPDATE_LOAD_CHECK=false
+UPDATE_MAX_LOAD="2.0"
+
 # Config-Migration Funktion (wird nach load_language aufgerufen)
 migrate_config() {
     local needs_migration=false
@@ -492,6 +503,354 @@ run_post_update_hooks() {
     local hooks_dir="${HOOKS_DIR:-/etc/update-hooks}/post.d"
     log_info "$MSG_HOOKS_POST_START"
     run_hooks "$hooks_dir"
+}
+
+#############################################################
+# Backup-Funktionen (v1.8.0)
+#############################################################
+
+# System-Last prüfen (verhindert Update bei hoher CPU-Last)
+check_system_load() {
+    if [ "$UPDATE_LOAD_CHECK" != "true" ]; then
+        return 0
+    fi
+
+    local load_avg
+    load_avg=$(awk '{print $1}' /proc/loadavg)
+    local max_load="${UPDATE_MAX_LOAD:-2.0}"
+
+    # Vergleich via awk (kein bc nötig)
+    if awk "BEGIN { exit ($load_avg > $max_load) ? 0 : 1 }" 2>/dev/null; then
+        # shellcheck disable=SC2059
+        log_warning "$(printf "$MSG_LOAD_CHECK_HIGH" "$load_avg" "$max_load")"
+        return 1
+    fi
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_LOAD_CHECK_OK" "$load_avg")"
+    return 0
+}
+
+# LVM-Snapshot erstellen
+backup_lvm() {
+    local timestamp="$1"
+    local snapshot_name="update-snap-${timestamp}"
+
+    # Root-Volume ermitteln
+    local root_lv
+    root_lv=$(findmnt -n -o SOURCE / 2>/dev/null | head -1)
+
+    if [ -z "$root_lv" ]; then
+        log_error "$MSG_BACKUP_LVM_NO_ROOT"
+        return 1
+    fi
+
+    local root_vg
+    root_vg=$(lvs --noheadings -o vg_name "$root_lv" 2>/dev/null | tr -d ' ')
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_BACKUP_LVM_SNAPSHOT" "$root_lv" "$snapshot_name")"
+
+    if lvcreate -L10G -s -n "$snapshot_name" "$root_lv" 2>&1 | tee -a "$LOG_FILE"; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_BACKUP_LVM_SUCCESS" "/dev/${root_vg}/${snapshot_name}")"
+        return 0
+    else
+        log_error "$MSG_BACKUP_LVM_FAILED"
+        return 1
+    fi
+}
+
+# Btrfs-Snapshot erstellen
+backup_btrfs() {
+    local timestamp="$1"
+    local snapshot_dir="${BACKUP_TARGET}/btrfs-snapshots"
+    local snapshot_name="system-${timestamp}"
+
+    # Prüfe ob / ein Btrfs-Dateisystem ist
+    if ! findmnt -n -o FSTYPE / 2>/dev/null | grep -q "btrfs"; then
+        log_error "$MSG_BACKUP_BTRFS_NOT_BTRFS"
+        return 1
+    fi
+
+    mkdir -p "$snapshot_dir" 2>/dev/null
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_BACKUP_BTRFS_SNAPSHOT" "$snapshot_name")"
+
+    if btrfs subvolume snapshot / "${snapshot_dir}/${snapshot_name}" 2>&1 | tee -a "$LOG_FILE"; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_BACKUP_BTRFS_SUCCESS" "${snapshot_dir}/${snapshot_name}")"
+        return 0
+    else
+        log_error "$MSG_BACKUP_BTRFS_FAILED"
+        return 1
+    fi
+}
+
+# ZFS-Snapshot erstellen
+backup_zfs() {
+    local timestamp="$1"
+    local snapshot_name="update-${timestamp}"
+
+    # Root-Dataset ermitteln
+    local root_dataset
+    root_dataset=$(zfs list -H -o name / 2>/dev/null | head -1)
+
+    if [ -z "$root_dataset" ]; then
+        log_error "$MSG_BACKUP_ZFS_NO_DATASET"
+        return 1
+    fi
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_BACKUP_ZFS_SNAPSHOT" "$root_dataset" "$snapshot_name")"
+
+    if zfs snapshot "${root_dataset}@${snapshot_name}" 2>&1 | tee -a "$LOG_FILE"; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_BACKUP_ZFS_SUCCESS" "${root_dataset}@${snapshot_name}")"
+        return 0
+    else
+        log_error "$MSG_BACKUP_ZFS_FAILED"
+        return 1
+    fi
+}
+
+# Rsync-Backup erstellen
+backup_rsync() {
+    local timestamp="$1"
+    local backup_dest="${BACKUP_TARGET}/system-${timestamp}"
+
+    if ! command -v rsync &>/dev/null; then
+        log_error "$MSG_BACKUP_RSYNC_NOT_FOUND"
+        return 1
+    fi
+
+    if ! mkdir -p "$backup_dest" 2>/dev/null; then
+        # shellcheck disable=SC2059
+        log_error "$(printf "$MSG_BACKUP_TARGET_CREATE_FAILED" "$backup_dest")"
+        return 1
+    fi
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_BACKUP_RSYNC_START" "$backup_dest")"
+
+    if rsync -aAX \
+        --exclude="/dev/*" \
+        --exclude="/proc/*" \
+        --exclude="/sys/*" \
+        --exclude="/tmp/*" \
+        --exclude="/run/*" \
+        --exclude="/mnt/*" \
+        --exclude="/media/*" \
+        --exclude="/lost+found" \
+        --exclude="${BACKUP_TARGET}/*" \
+        --exclude="/var/log/*" \
+        / "$backup_dest/" 2>&1 | tee -a "$LOG_FILE"; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_BACKUP_RSYNC_SUCCESS" "$backup_dest")"
+        return 0
+    else
+        log_error "$MSG_BACKUP_RSYNC_FAILED"
+        return 1
+    fi
+}
+
+# Alte Backups rotieren (nur neueste BACKUP_RETENTION Backups behalten)
+rotate_backups() {
+    local method="$1"
+    local retention="${BACKUP_RETENTION:-3}"
+
+    case "$method" in
+        rsync)
+            local backup_count
+            backup_count=$(find "$BACKUP_TARGET" -maxdepth 1 -name "system-*" -type d 2>/dev/null | wc -l)
+            if [ "$backup_count" -gt "$retention" ]; then
+                local to_delete=$(( backup_count - retention ))
+                # shellcheck disable=SC2059
+                log_info "$(printf "$MSG_BACKUP_ROTATE" "$to_delete")"
+                find "$BACKUP_TARGET" -maxdepth 1 -name "system-*" -type d 2>/dev/null \
+                    | sort \
+                    | head -n "$to_delete" \
+                    | while read -r old_backup; do
+                        # shellcheck disable=SC2059
+                        log_info "$(printf "$MSG_BACKUP_ROTATE_DELETE" "$old_backup")"
+                        rm -rf "$old_backup" 2>&1 | tee -a "$LOG_FILE"
+                    done
+            fi
+            ;;
+        btrfs)
+            local snapshot_dir="${BACKUP_TARGET}/btrfs-snapshots"
+            local snap_count
+            snap_count=$(find "$snapshot_dir" -maxdepth 1 -name "system-*" -type d 2>/dev/null | wc -l)
+            if [ "$snap_count" -gt "$retention" ]; then
+                local to_delete=$(( snap_count - retention ))
+                find "$snapshot_dir" -maxdepth 1 -name "system-*" -type d 2>/dev/null \
+                    | sort \
+                    | head -n "$to_delete" \
+                    | while read -r old_snap; do
+                        # shellcheck disable=SC2059
+                        log_info "$(printf "$MSG_BACKUP_ROTATE_DELETE" "$old_snap")"
+                        btrfs subvolume delete "$old_snap" 2>&1 | tee -a "$LOG_FILE"
+                    done
+            fi
+            ;;
+        lvm)
+            local snap_count
+            snap_count=$(lvs --noheadings -o lv_name 2>/dev/null | grep -c "update-snap-" || echo "0")
+            if [ "$snap_count" -gt "$retention" ]; then
+                local to_delete=$(( snap_count - retention ))
+                lvs --noheadings -o lv_name,lv_path 2>/dev/null \
+                    | grep "update-snap-" \
+                    | sort \
+                    | head -n "$to_delete" \
+                    | awk '{print $2}' \
+                    | while read -r old_snap; do
+                        # shellcheck disable=SC2059
+                        log_info "$(printf "$MSG_BACKUP_ROTATE_DELETE" "$old_snap")"
+                        lvremove -f "$old_snap" 2>&1 | tee -a "$LOG_FILE"
+                    done
+            fi
+            ;;
+        zfs)
+            local snap_count
+            snap_count=$(zfs list -H -t snapshot -o name 2>/dev/null | grep -c "@update-" || echo "0")
+            if [ "$snap_count" -gt "$retention" ]; then
+                local to_delete=$(( snap_count - retention ))
+                zfs list -H -t snapshot -o name 2>/dev/null \
+                    | grep "@update-" \
+                    | sort \
+                    | head -n "$to_delete" \
+                    | while read -r old_snap; do
+                        # shellcheck disable=SC2059
+                        log_info "$(printf "$MSG_BACKUP_ROTATE_DELETE" "$old_snap")"
+                        zfs destroy "$old_snap" 2>&1 | tee -a "$LOG_FILE"
+                    done
+            fi
+            ;;
+    esac
+}
+
+# Prüft ob Backup-Ziel auf demselben Laufwerk wie / liegt
+# Erlaubt es wenn genug freier Speicher vorhanden (mind. Systemgröße + 20%)
+check_backup_target() {
+    local target="$1"
+
+    # Geräte-IDs ermitteln (numerische Major:Minor)
+    local device_root device_target
+    device_root=$(stat -c %d / 2>/dev/null)
+    mkdir -p "$target" 2>/dev/null
+    device_target=$(stat -c %d "$target" 2>/dev/null)
+
+    # Verschiedene Geräte → kein Problem
+    if [ "$device_root" != "$device_target" ]; then
+        return 0
+    fi
+
+    # Gleiches Gerät → Warnung + Speicherplatz prüfen
+    log_warning "$MSG_BACKUP_SAME_DEVICE"
+
+    # Verwendeter Speicher auf / in KB
+    local used_kb
+    used_kb=$(df -k / | awk 'NR==2 {print $3}')
+
+    # Freier Speicher auf dem Ziel-Gerät in KB
+    local free_kb
+    free_kb=$(df -k "$target" | awk 'NR==2 {print $4}')
+
+    # Benötigter Speicher: Systemgröße + 20% Puffer
+    local required_kb free_gb required_gb used_gb
+    required_kb=$(awk "BEGIN { printf \"%d\", $used_kb * 1.2 }")
+    used_gb=$(awk "BEGIN { printf \"%.1f\", $used_kb / 1048576 }")
+    free_gb=$(awk "BEGIN { printf \"%.1f\", $free_kb / 1048576 }")
+    required_gb=$(awk "BEGIN { printf \"%.1f\", $required_kb / 1048576 }")
+
+    if [ "$free_kb" -ge "$required_kb" ]; then
+        # shellcheck disable=SC2059
+        log_warning "$(printf "$MSG_BACKUP_SAME_DEVICE_OK" "$free_gb" "$required_gb")"
+        return 0
+    else
+        # shellcheck disable=SC2059
+        log_error "$(printf "$MSG_BACKUP_SAME_DEVICE_LOW" "$free_gb" "$required_gb" "$used_gb")"
+        return 1
+    fi
+}
+
+# Backup erstellen (Hauptfunktion)
+run_backup() {
+    if [ "$ENABLE_BACKUP" != "true" ]; then
+        return 0
+    fi
+
+    local timestamp
+    timestamp=$(date +"%Y%m%d_%H%M%S")
+    local method="${BACKUP_METHOD:-rsync}"
+
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_BACKUP_START" "$method")"
+
+    # Backup-Ziel prüfen (außer bei ZFS/LVM, die eigenständig arbeiten)
+    if [ "$method" = "rsync" ] || [ "$method" = "btrfs" ]; then
+        if [ -z "$BACKUP_TARGET" ]; then
+            log_error "$MSG_BACKUP_NO_TARGET"
+            return 1
+        fi
+        if ! mkdir -p "$BACKUP_TARGET" 2>/dev/null; then
+            # shellcheck disable=SC2059
+            log_error "$(printf "$MSG_BACKUP_TARGET_CREATE_FAILED" "$BACKUP_TARGET")"
+            return 1
+        fi
+        # Prüfen ob Backup-Ziel auf demselben Laufwerk wie / liegt
+        if ! check_backup_target "$BACKUP_TARGET"; then
+            return 1
+        fi
+    fi
+
+    local backup_exit=0
+
+    case "$method" in
+        lvm)
+            if ! command -v lvcreate &>/dev/null; then
+                log_error "$MSG_BACKUP_LVM_NOT_FOUND"
+                backup_exit=1
+            else
+                backup_lvm "$timestamp" || backup_exit=1
+            fi
+            ;;
+        btrfs)
+            if ! command -v btrfs &>/dev/null; then
+                log_error "$MSG_BACKUP_BTRFS_NOT_FOUND"
+                backup_exit=1
+            else
+                backup_btrfs "$timestamp" || backup_exit=1
+            fi
+            ;;
+        zfs)
+            if ! command -v zfs &>/dev/null; then
+                log_error "$MSG_BACKUP_ZFS_NOT_FOUND"
+                backup_exit=1
+            else
+                backup_zfs "$timestamp" || backup_exit=1
+            fi
+            ;;
+        rsync)
+            backup_rsync "$timestamp" || backup_exit=1
+            ;;
+        *)
+            # shellcheck disable=SC2059
+            log_error "$(printf "$MSG_BACKUP_UNKNOWN_METHOD" "$method")"
+            backup_exit=1
+            ;;
+    esac
+
+    if [ "$backup_exit" -eq 0 ]; then
+        rotate_backups "$method"
+        log_info "$MSG_BACKUP_DONE"
+    else
+        log_warning "$MSG_BACKUP_FAILED_CONTINUE"
+    fi
+
+    # Backup-Fehler blockieren das Update nicht
+    return 0
 }
 
 # Zählt stabile Kernel-Versionen (Debian/Ubuntu)
@@ -1071,7 +1430,7 @@ safe_autoremove() {
     if [ "$KERNEL_PROTECTION" != "true" ]; then
         case "$pkg_manager" in
             apt)
-                apt-get autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                DEBIAN_FRONTEND=noninteractive apt-get autoremove -y 2>&1 | tee -a "$LOG_FILE"
                 ;;
             dnf)
                 dnf autoremove -y 2>&1 | tee -a "$LOG_FILE"
@@ -1110,7 +1469,7 @@ safe_autoremove() {
         log_info "$MSG_KERNEL_SAFE_AUTOREMOVE"
         case "$pkg_manager" in
             apt)
-                apt-get autoremove -y 2>&1 | tee -a "$LOG_FILE"
+                DEBIAN_FRONTEND=noninteractive apt-get autoremove -y 2>&1 | tee -a "$LOG_FILE"
                 ;;
             dnf)
                 dnf autoremove -y 2>&1 | tee -a "$LOG_FILE"
@@ -1336,7 +1695,7 @@ perform_upgrade_debian_native() {
 
     # Schritt 3: apt-get update
     log_info "$MSG_UPGRADE_REFRESH_REPOS"
-    if ! apt-get update 2>&1 | tee -a "$LOG_FILE"; then
+    if ! DEBIAN_FRONTEND=noninteractive apt-get update 2>&1 | tee -a "$LOG_FILE"; then
         log_error "$MSG_UPGRADE_REFRESH_FAILED"
         # shellcheck disable=SC2059
         log_warning "$(printf "$MSG_UPGRADE_DEBIAN_SOURCES_RESTORE" "$sources_backup")"
@@ -1350,7 +1709,7 @@ perform_upgrade_debian_native() {
 
     # Schritt 4: Dry-Run
     log_info "$MSG_UPGRADE_DRY_RUN_START"
-    if ! apt-get dist-upgrade --simulate 2>&1 | tee -a "$LOG_FILE"; then
+    if ! DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade --simulate 2>&1 | tee -a "$LOG_FILE"; then
         log_error "$MSG_UPGRADE_DRY_RUN_FAILED"
         echo -n "$MSG_NVIDIA_CONTINUE_ANYWAY "
         read -r response
@@ -1363,7 +1722,7 @@ perform_upgrade_debian_native() {
                 find /etc/apt/sources.list.d/ -type f \( -name "*.list" -o -name "*.sources" \) \
                     -exec sed -i "s/${next_codename}/${current_codename}/g" {} \; 2>/dev/null || true
             fi
-            apt-get update 2>/dev/null | tee -a "$LOG_FILE"
+            DEBIAN_FRONTEND=noninteractive apt-get update 2>/dev/null | tee -a "$LOG_FILE"
             return 1
         fi
     else
@@ -1391,8 +1750,8 @@ check_upgrade_mint() {
         log_warning "$MSG_UPGRADE_MINTUPGRADE_NOT_INSTALLED"
         log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALLING"
 
-        if apt-get update 2>&1 | tee -a "$LOG_FILE" && \
-           apt-get install -y mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
+        if DEBIAN_FRONTEND=noninteractive apt-get update 2>&1 | tee -a "$LOG_FILE" && \
+           DEBIAN_FRONTEND=noninteractive apt-get install -y mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
             log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALL_SUCCESS"
         else
             log_error "$MSG_UPGRADE_MINTUPGRADE_INSTALL_FAILED"
@@ -1541,8 +1900,8 @@ perform_upgrade() {
                 log_warning "$MSG_UPGRADE_MINTUPGRADE_NOT_INSTALLED"
                 log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALLING"
 
-                if apt-get update 2>&1 | tee -a "$LOG_FILE" && \
-                   apt-get install -y mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
+                if DEBIAN_FRONTEND=noninteractive apt-get update 2>&1 | tee -a "$LOG_FILE" && \
+                   DEBIAN_FRONTEND=noninteractive apt-get install -y mintupgrade 2>&1 | tee -a "$LOG_FILE"; then
                     log_info "$MSG_UPGRADE_MINTUPGRADE_INSTALL_SUCCESS"
                 else
                     log_error "$MSG_UPGRADE_MINTUPGRADE_INSTALL_FAILED"
@@ -1757,26 +2116,26 @@ perform_upgrade() {
 update_debian() {
     log_info "$MSG_UPDATE_START_DEBIAN"
 
-    apt-get update 2>&1 | tee -a "$LOG_FILE"
+    DEBIAN_FRONTEND=noninteractive apt-get update 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_APT_UPDATE_FAILED"
         return 1
     fi
 
-    apt-get upgrade -y 2>&1 | tee -a "$LOG_FILE"
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_APT_UPGRADE_FAILED"
         return 1
     fi
 
-    apt-get dist-upgrade -y 2>&1 | tee -a "$LOG_FILE"
+    DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "apt-get dist-upgrade fehlgeschlagen"
         return 1
     fi
 
     safe_autoremove "apt"
-    apt-get autoclean -y 2>&1 | tee -a "$LOG_FILE"
+    DEBIAN_FRONTEND=noninteractive apt-get autoclean -y 2>&1 | tee -a "$LOG_FILE"
 
     log_info "$MSG_UPDATE_SUCCESS"
     return 0
@@ -1989,6 +2348,12 @@ log_info "$MSG_KERNEL: $(uname -r)"
 # Root-Rechte prüfen
 check_root
 
+# System-Last prüfen (v1.8.0)
+if ! check_system_load; then
+    log_error "$MSG_LOAD_CHECK_ABORT"
+    exit 1
+fi
+
 # Info über verwendete Config-Datei (nur im Log)
 log "=== Config-Debugging (Hybrid-Modus) ==="
 log "SUDO_USER: ${SUDO_USER:-<nicht gesetzt>}"
@@ -2045,8 +2410,18 @@ if ! run_pre_update_hooks; then
     exit 1
 fi
 
+# Backup erstellen (v1.8.0)
+run_backup
+
 # Wenn Upgrade-Modus, führe Upgrade durch
 if [ "$UPGRADE_MODE" = true ]; then
+    # Bei Upgrades Backup erzwingen wenn BACKUP_BEFORE_UPGRADE=true (auch ohne ENABLE_BACKUP)
+    if [ "$BACKUP_BEFORE_UPGRADE" = "true" ] && [ "$ENABLE_BACKUP" != "true" ]; then
+        local_backup_enabled_orig="$ENABLE_BACKUP"
+        ENABLE_BACKUP=true
+        run_backup
+        ENABLE_BACKUP="$local_backup_enabled_orig"
+    fi
     if perform_upgrade; then
         run_post_update_hooks
         log_info "$MSG_UPGRADE_SUCCESS"

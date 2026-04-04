@@ -7,6 +7,37 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-04-04
+
+### Hinzugefügt
+- **Backup-Integration**: Automatische Backups vor Updates und Upgrades
+  - `run_backup()` - Hauptfunktion: erkennt Methode und orchestriert Backup + Rotation
+  - `backup_lvm()` - LVM-Snapshot des Root-Volumes (`lvcreate -s`)
+  - `backup_btrfs()` - Btrfs-Subvolume-Snapshot (`btrfs subvolume snapshot`)
+  - `backup_zfs()` - ZFS-Snapshot des Root-Datasets (`zfs snapshot`)
+  - `backup_rsync()` - Vollständiges Dateisystem-Backup via rsync (mit Standardausschlüssen)
+  - `rotate_backups()` - Automatische Rotation: älteste Backups werden gelöscht
+- **System-Last-Prüfung**: Update wird bei hoher CPU-Last abgebrochen
+  - `check_system_load()` - Liest `/proc/loadavg` und vergleicht mit `UPDATE_MAX_LOAD`
+  - Verhindert Updates auf ausgelasteten Servern
+- **6 neue Konfigurationsparameter**:
+  - `ENABLE_BACKUP=false` - Backup aktivieren/deaktivieren
+  - `BACKUP_METHOD="rsync"` - Methode: `lvm` | `btrfs` | `zfs` | `rsync`
+  - `BACKUP_TARGET="/backup/system"` - Zielverzeichnis (für rsync/btrfs)
+  - `BACKUP_RETENTION=3` - Anzahl zu behaltender Backups
+  - `BACKUP_BEFORE_UPGRADE=true` - Backup vor Distribution-Upgrades erzwingen (auch ohne ENABLE_BACKUP)
+  - `UPDATE_LOAD_CHECK=false` - Load-Check aktivieren/deaktivieren
+  - `UPDATE_MAX_LOAD="2.0"` - Maximale 1-Minuten-Last für Update-Start
+- **34 neue Sprachmeldungen** (DE + EN):
+  - Backup-Start, Erfolg, Fehler, Rotation
+  - Methoden-spezifische Meldungen (LVM, Btrfs, ZFS, rsync)
+  - Load-Check Meldungen
+
+### Verbessert
+- **debconf-Warnungen unterdrückt**: Alle `apt-get`-Aufrufe verwenden jetzt `DEBIAN_FRONTEND=noninteractive`
+  - Betrifft: `update`, `upgrade`, `dist-upgrade`, `autoremove`, `autoclean`, `install`
+  - Verhindert die Fehlerkette Dialog → Readline → Teletype → Noninteractive beim Ausführen ohne Terminal (z.B. Cron-Jobs)
+
 ## [1.7.0] - 2026-03-13
 
 ### Hinzugefügt

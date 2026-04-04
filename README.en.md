@@ -19,6 +19,8 @@ Automated update script for various Linux distributions with optional email noti
 
 ## Features
 
+- ✅ **Backup Integration**: Automatic backups before updates – LVM, Btrfs, ZFS, rsync (v1.8.0)
+- ✅ **System Load Check**: Abort update when CPU load is too high (v1.8.0)
 - ✅ **Hooks & Automation**: Pre/Post-Update hooks for services, backups, monitoring (v1.7.0)
 - ✅ **Debian Native Upgrade**: Automated Debian version upgrades without external tools (v1.7.0)
 - ✅ **NVIDIA Compatibility Check**: DKMS check, Kernel Hold, Secure Boot (v1.6.0)
@@ -251,10 +253,12 @@ sudo ./update.sh
 ```
 
 The script automatically performs the following steps:
-1. Install system updates
-2. Check for available distribution upgrades
-3. Optional: Send email notification
-4. Optional: Show desktop notification
+1. Check system load (optional, v1.8.0)
+2. Create backup (optional, v1.8.0)
+3. Install system updates
+4. Check for available distribution upgrades
+5. Optional: Send email notification
+6. Optional: Show desktop notification
 
 ### Performing Distribution Upgrade
 
@@ -459,6 +463,31 @@ HOOKS_ABORT_ON_ERROR=false
 
 # Timeout per hook in seconds
 HOOKS_TIMEOUT=300
+
+# --- Backup (v1.8.0) ---
+
+# Enable backup before updates (true/false)
+ENABLE_BACKUP=false
+
+# Backup method: rsync | btrfs | lvm | zfs
+BACKUP_METHOD="rsync"
+
+# Backup target directory (for rsync and btrfs)
+BACKUP_TARGET="/backup/system"
+
+# Number of backups to retain (older ones are deleted automatically)
+BACKUP_RETENTION=3
+
+# Force backup before distribution upgrades – even if ENABLE_BACKUP=false (true/false)
+BACKUP_BEFORE_UPGRADE=true
+
+# --- System Load Check (v1.8.0) ---
+
+# Abort update if system load is too high (true/false)
+UPDATE_LOAD_CHECK=false
+
+# Maximum 1-minute load average for update start
+UPDATE_MAX_LOAD="2.0"
 ```
 
 ### Change Configuration
@@ -1375,6 +1404,131 @@ sudo dkms autoinstall
 sudo dkms autoinstall -k 6.5.0-35-generic
 ```
 
+## Backup Integration
+
+**NEW in v1.8.0:** The script can automatically create backups before updates.
+
+### Backup Methods
+
+| Method | Description | Requirement |
+|--------|-------------|-------------|
+| `rsync` | Full filesystem backup (default) | `rsync` |
+| `btrfs` | Subvolume snapshot (fast, space-efficient) | Btrfs root + `btrfs-progs` |
+| `lvm` | LVM snapshot of root volume | LVM + `lvm2` |
+| `zfs` | ZFS snapshot of root dataset | ZFS + `zfsutils` |
+
+### Configuration
+
+```bash
+# In config.conf:
+
+# Enable backup
+ENABLE_BACKUP=true
+
+# Choose method
+BACKUP_METHOD="rsync"       # or: btrfs, lvm, zfs
+
+# Target directory (for rsync and btrfs) – any path
+BACKUP_TARGET="/backup/system"       # Default
+BACKUP_TARGET="/mnt/external-drive"  # External hard drive (recommended)
+BACKUP_TARGET="/media/backup-nas"    # NAS (when mounted)
+
+# Number of backups to retain (older ones are deleted automatically)
+BACKUP_RETENTION=3
+
+# Force backup before distribution upgrades (even if ENABLE_BACKUP=false)
+BACKUP_BEFORE_UPGRADE=true
+```
+
+### Backup Target on Same Drive
+
+The script automatically detects when the backup target is on the same drive as `/`:
+
+**Sufficient free space (≥ system size + 20%):**
+```
+[WARNING] Backup target is on the same drive as the system (/)
+[WARNING] Sufficient free space available (45.2 GB free, 28.8 GB required) - backup will continue
+```
+→ Update proceeds
+
+**Insufficient free space:**
+```
+[WARNING] Backup target is on the same drive as the system (/)
+[ERROR]   Insufficient free space (8.0 GB free, 28.8 GB required for 24.0 GB system data +20%) - backup aborted
+```
+→ Backup is skipped, update continues
+
+**Recommendation:** Use a **separate drive** for backups – this also protects against hardware failures.
+
+### Example Output
+
+```bash
+sudo ./update.sh
+
+# [INFO] Creating backup (method: rsync)...
+# [INFO] Starting rsync backup to: /backup/system/system-20260404_030015
+# [INFO] Backup completed successfully
+# [INFO] Starting update process...
+```
+
+### Backup Rotation
+
+Old backups are automatically deleted when more than `BACKUP_RETENTION` backups exist:
+
+```bash
+# [INFO] Rotating backups: deleting 1 old backup(s)
+# [INFO] Deleting old backup: /backup/system/system-20260301_030012
+```
+
+### Prerequisites
+
+```bash
+# Install rsync (Debian/Ubuntu)
+sudo apt-get install rsync
+
+# btrfs-progs (for Btrfs snapshots)
+sudo apt-get install btrfs-progs
+
+# lvm2 (for LVM snapshots)
+sudo apt-get install lvm2
+```
+
+---
+
+## System Load Check
+
+**NEW in v1.8.0:** The script can refuse to start updates when the system is heavily loaded.
+
+### Use Case
+
+Useful on servers that are heavily loaded at certain times – for example, prevents a cron job update from starting during peak load.
+
+### Configuration
+
+```bash
+# In config.conf:
+
+# Enable load check (default: false)
+UPDATE_LOAD_CHECK=true
+
+# Maximum 1-minute load average (default: 2.0)
+UPDATE_MAX_LOAD="2.0"
+```
+
+### Example
+
+```bash
+# Load acceptable:
+# [INFO] System load acceptable (0.8) - starting update
+
+# Load too high:
+# [WARNING] System load too high (3.4 > 2.0) - update will be aborted
+```
+
+If the load is too high, the script exits with code 1 – a cron job update will be retried at the next scheduled time.
+
+---
+
 ## Security Notes
 
 - The script requires root privileges for system updates
@@ -1422,13 +1576,16 @@ For problems or questions:
 
 The complete version history can be found in the [CHANGELOG.md](CHANGELOG.md) file.
 
-### Current Version: 1.7.0 (2026-03-13) - Hooks & Automation + Debian Native Upgrade
+### Current Version: 1.8.0 (2026-04-04) - Backup Integration & Optimization
 
 **Highlights:**
-- ✅ **NEW: Hooks System** - Pre/Post-Update hooks for services, backups, monitoring
-- ✅ **NEW: Debian Native Upgrade** - Automated version upgrades without external tools
-- ✅ XDG Compliance (v1.6.0)
+- ✅ **NEW: Backup Integration** – LVM, Btrfs, ZFS, rsync with automatic rotation
+- ✅ **NEW: System Load Check** – abort update when CPU load is too high
+- ✅ **NEW: Drive Check** – warns when backup is on the same drive, checks free space
+- ✅ Hooks System – Pre/Post-Update hooks (v1.7.0)
+- ✅ Debian Native Upgrade workflow (v1.7.0)
 - ✅ NVIDIA Secure Boot & Kernel Hold (v1.6.0)
+- ✅ XDG Compliance (v1.6.0)
 - ✅ Desktop Notifications (v1.5.1)
 - ✅ Upgrade Check System (v1.5.0)
 - ✅ Kernel Protection (v1.5.0)

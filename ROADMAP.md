@@ -592,41 +592,94 @@ DEBIAN_CODENAMES_ORDERED="buster bullseye bookworm trixie"
 
 ---
 
-## Version 1.8.0 - Backup & Optimierung
+## Version 1.8.0 - Backup & Optimierung ✅
+
+**Status:** ✅ Implementiert (Released: 2026-04-04)
 
 ### 💾 Backup-Integration
 
-**Motivation:**
-Automatische Backups vor kritischen Updates erhöhen die Sicherheit.
+**Implementierte Features:**
 
-**Features:**
-- Snapshot-Support für LVM, Btrfs, ZFS
-- Rsync-basierte Backups
-- Backup vor Distribution-Upgrades
-- Konfigurierbare Backup-Ziele
-- Automatische Backup-Rotation
+#### Backup-Methoden
+- ✅ `backup_lvm()` - LVM-Snapshot des Root-Volumes (`lvcreate -s`)
+- ✅ `backup_btrfs()` - Btrfs-Subvolume-Snapshot (`btrfs subvolume snapshot`)
+- ✅ `backup_zfs()` - ZFS-Snapshot des Root-Datasets (`zfs snapshot`)
+- ✅ `backup_rsync()` - Vollständiges Dateisystem-Backup (mit Standardausschlüssen)
+- ✅ `rotate_backups()` - Automatische Rotation alter Backups
+- ✅ `run_backup()` - Orchestrierung: Methoden-Dispatch + Rotation
 
-**Konfiguration:**
+#### System-Last-Prüfung
+- ✅ `check_system_load()` - Prüft `/proc/loadavg` gegen `UPDATE_MAX_LOAD`
+- ✅ Update-Abbruch bei zu hoher Last (optional, standardmäßig deaktiviert)
+
+#### Konfiguration
 ```bash
-# Backup vor Updates (true/false)
-ENABLE_BACKUP=true
+ENABLE_BACKUP=false           # Backup aktivieren
+BACKUP_METHOD="rsync"         # lvm | btrfs | zfs | rsync
+BACKUP_TARGET="/backup/system" # Zielverzeichnis
+BACKUP_RETENTION=3            # Anzahl zu behaltender Backups
+BACKUP_BEFORE_UPGRADE=true    # Backup vor Dist-Upgrade erzwingen
 
-# Backup-Methode (lvm|btrfs|zfs|rsync)
-BACKUP_METHOD="btrfs"
-
-# Backup-Ziel
-BACKUP_TARGET="/backup/snapshots"
-
-# Backup-Rotation (Anzahl zu behaltender Backups)
-BACKUP_RETENTION=3
+UPDATE_LOAD_CHECK=false       # Load-Check aktivieren
+UPDATE_MAX_LOAD="2.0"         # Maximale 1-Minuten-Last
 ```
 
-### ⚙️ Weitere Optimierungen
+#### Ablauf
+```
+1. Root-Check
+2. Load-Check (wenn UPDATE_LOAD_CHECK=true)
+3. Distribution erkennen
+4. NVIDIA-Kompatibilität prüfen
+5. Pre-Hooks ausführen
+6. Backup erstellen (wenn ENABLE_BACKUP=true)
+7. Update/Upgrade durchführen
+8. Post-Hooks ausführen
+```
 
-- **Update-Schedule**: Intelligente Update-Zeitpunkte (Low-Load-Detection)
-- **Bandwidth-Limit**: Download-Geschwindigkeit begrenzen
-- **Delta-Updates**: Nur Unterschiede laden (wenn unterstützt)
-- **Progress-Anzeige**: Fortschrittsbalken für lange Updates
+---
+
+## Version 1.9.0 - Netzwerk & Fortschritt
+
+**Status:** 📋 Konzeptphase
+
+### 🌐 Bandwidth-Limit
+
+**Motivation:**
+Updates sollen die verfügbare Netzwerkbandbreite nicht vollständig belegen – besonders relevant für Server im Produktivbetrieb oder Heimanwender mit langsamer Leitung.
+
+**Geplante Features:**
+- Konfigurierbare Download-Geschwindigkeit pro Paketmanager
+- Distributionsspezifische Implementierung:
+  * Debian/Ubuntu: `apt-get -o Acquire::http::Dl-Limit=<KB/s>`
+  * RHEL/Fedora: `dnf --setopt=throttle=<KB/s>`
+  * Arch: `pacman --disable-download-timeout` + `trickle` (extern)
+  * openSUSE: `zypper --pkg-cache-dir` + Bandbreitenlimit über Konfiguration
+- Deaktiviert wenn kein Limit gesetzt (`BANDWIDTH_LIMIT=""`)
+
+**Konfiguration (geplant):**
+```bash
+# Bandwidth-Limit in KB/s (leer = kein Limit)
+BANDWIDTH_LIMIT=""         # Kein Limit (Standard)
+BANDWIDTH_LIMIT="500"      # 500 KB/s
+BANDWIDTH_LIMIT="2000"     # 2 MB/s
+```
+
+### 📊 Fortschrittsanzeige
+
+**Motivation:**
+Lange Updates geben keinen Hinweis auf den Fortschritt – besonders bei großen Distribution-Upgrades oder vielen Paketen ist eine Rückmeldung hilfreich.
+
+**Geplante Features:**
+- Einfacher Spinner für laufende Operationen (ohne externe Abhängigkeiten)
+- Paket-Zähler: „Paket 12 von 47 wird installiert..."
+- Optionale `pv`-Integration für Datenstrom-Fortschritt (wenn installiert)
+- Graceful Degradation: funktioniert auch ohne `pv`
+
+**Konfiguration (geplant):**
+```bash
+# Fortschrittsanzeige aktivieren (true/false)
+ENABLE_PROGRESS=true
+```
 
 ---
 
@@ -830,12 +883,13 @@ Features werden priorisiert nach:
 - **v1.5.1** ✅ - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
 - **v1.6.0** ✅ - **XDG-Konformität, Config-Migration & NVIDIA-Prüfung** (Implementiert: 2026-01-24)
 - **v1.7.0** ✅ - Hooks & Automation (Pre/Post-Update Hooks) (Released: 2026-03-13)
-- **v1.8.0** 📋 - Backup-Integration & Optimierungen
+- **v1.8.0** ✅ - Backup-Integration & Load-Check (Released: 2026-04-04)
+- **v1.9.0** 📋 - Bandwidth-Limit & Fortschrittsanzeige
 - **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
 
 ### Architektur-Strategie
 
-**v1.5.0 - v1.8.0:** Monolithische Architektur beibehalten
+**v1.5.0 - v1.9.0:** Monolithische Architektur beibehalten
 - ✅ Aktuell überschaubar und stabil
 - ✅ Einfach für Contributors
 - ✅ Community-Feedback sammeln
@@ -847,4 +901,4 @@ Features werden priorisiert nach:
 - 🏗️ Migration-Script für User
 - 🏗️ 6 Monate Support für v1.x
 
-Letzte Aktualisierung: 2026-03-13
+Letzte Aktualisierung: 2026-04-04

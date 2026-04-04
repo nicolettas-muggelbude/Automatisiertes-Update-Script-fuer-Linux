@@ -19,6 +19,8 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 
 ## Features
 
+- ✅ **Backup-Integration**: Automatische Backups vor Updates – LVM, Btrfs, ZFS, rsync (v1.8.0)
+- ✅ **System-Last-Prüfung**: Update-Abbruch bei hoher CPU-Last (v1.8.0)
 - ✅ **Hooks & Automation**: Eigene Scripts vor/nach Updates (Pre/Post-Hooks) (v1.7.0)
 - ✅ **Debian Upgrade**: Automatischer nativer Upgrade-Workflow (bookworm → trixie) (v1.7.0)
 - ✅ **NVIDIA-Kompatibilitätsprüfung**: Verhindert schwarzen Bildschirm nach Kernel-Updates (v1.6.0)
@@ -251,10 +253,12 @@ sudo ./update.sh
 ```
 
 Das Script führt automatisch folgende Schritte durch:
-1. System-Updates installieren
-2. Prüfung auf verfügbare Distribution-Upgrades
-3. Optional: E-Mail-Benachrichtigung versenden
-4. Optional: Desktop-Benachrichtigung anzeigen
+1. System-Last prüfen (optional, v1.8.0)
+2. Backup erstellen (optional, v1.8.0)
+3. System-Updates installieren
+4. Prüfung auf verfügbare Distribution-Upgrades
+5. Optional: E-Mail-Benachrichtigung versenden
+6. Optional: Desktop-Benachrichtigung anzeigen
 
 ### Distribution-Upgrade durchführen
 
@@ -457,6 +461,31 @@ HOOKS_ABORT_ON_ERROR=false
 
 # Timeout pro Hook in Sekunden
 HOOKS_TIMEOUT=300
+
+# --- Backup (v1.8.0) ---
+
+# Backup vor Updates aktivieren (true/false)
+ENABLE_BACKUP=false
+
+# Backup-Methode: rsync | btrfs | lvm | zfs
+BACKUP_METHOD="rsync"
+
+# Backup-Zielverzeichnis (für rsync und btrfs)
+BACKUP_TARGET="/backup/system"
+
+# Anzahl zu behaltender Backups (ältere werden automatisch gelöscht)
+BACKUP_RETENTION=3
+
+# Backup vor Distribution-Upgrades erzwingen – auch wenn ENABLE_BACKUP=false (true/false)
+BACKUP_BEFORE_UPGRADE=true
+
+# --- System-Last-Prüfung (v1.8.0) ---
+
+# Update abbrechen wenn System-Last zu hoch (true/false)
+UPDATE_LOAD_CHECK=false
+
+# Maximale 1-Minuten-Last für Update-Start
+UPDATE_MAX_LOAD="2.0"
 ```
 
 ### Konfiguration ändern
@@ -1373,6 +1402,131 @@ sudo dkms autoinstall
 sudo dkms autoinstall -k 6.5.0-35-generic
 ```
 
+## Backup-Integration
+
+**NEU in v1.8.0:** Das Script kann automatisch Backups vor Updates erstellen.
+
+### Backup-Methoden
+
+| Methode | Beschreibung | Voraussetzung |
+|---------|-------------|---------------|
+| `rsync` | Vollständiges Dateisystem-Backup (Standard) | `rsync` |
+| `btrfs` | Subvolume-Snapshot (schnell, platzsparend) | Btrfs-Root + `btrfs-progs` |
+| `lvm` | LVM-Snapshot des Root-Volumes | LVM + `lvm2` |
+| `zfs` | ZFS-Snapshot des Root-Datasets | ZFS + `zfsutils` |
+
+### Konfiguration
+
+```bash
+# In config.conf:
+
+# Backup aktivieren
+ENABLE_BACKUP=true
+
+# Methode wählen
+BACKUP_METHOD="rsync"       # oder: btrfs, lvm, zfs
+
+# Zielverzeichnis (für rsync und btrfs) – beliebiger Pfad
+BACKUP_TARGET="/backup/system"       # Standard
+BACKUP_TARGET="/mnt/externe-platte"  # Externe Festplatte (empfohlen)
+BACKUP_TARGET="/media/backup-nas"    # NAS (wenn gemountet)
+
+# Anzahl zu behaltender Backups (ältere werden automatisch gelöscht)
+BACKUP_RETENTION=3
+
+# Backup vor Distribution-Upgrades erzwingen (auch wenn ENABLE_BACKUP=false)
+BACKUP_BEFORE_UPGRADE=true
+```
+
+### Backup-Ziel auf gleichem Laufwerk
+
+Das Script erkennt automatisch, wenn das Backup-Ziel auf demselben Laufwerk wie `/` liegt:
+
+**Genug freier Speicher (≥ Systemgröße + 20%):**
+```
+[WARNUNG] Backup-Ziel liegt auf demselben Laufwerk wie das System (/)
+[WARNUNG] Genug freier Speicher vorhanden (45.2 GB frei, 28.8 GB benötigt) - Backup wird fortgesetzt
+```
+→ Update läuft weiter
+
+**Zu wenig freier Speicher:**
+```
+[WARNUNG] Backup-Ziel liegt auf demselben Laufwerk wie das System (/)
+[FEHLER]  Zu wenig freier Speicher (8.0 GB frei, 28.8 GB benötigt für 24.0 GB Systemdaten +20%) - Backup abgebrochen
+```
+→ Backup wird übersprungen, Update läuft weiter
+
+**Empfehlung:** Backup-Ziel auf einem **separaten Laufwerk** anlegen – das schützt auch vor Hardware-Ausfällen.
+
+### Ablauf
+
+```bash
+sudo ./update.sh
+
+# [INFO] Erstelle Backup (Methode: rsync)...
+# [INFO] Starte rsync-Backup nach: /backup/system/system-20260404_030015
+# [INFO] Backup erfolgreich abgeschlossen
+# [INFO] Starte Update-Prozess...
+```
+
+### Backup-Rotation
+
+Älteste Backups werden automatisch gelöscht wenn mehr als `BACKUP_RETENTION` Backups vorhanden sind:
+
+```bash
+# [INFO] Rotiere Backups: 1 alte Backup(s) werden gelöscht
+# [INFO] Lösche altes Backup: /backup/system/system-20260301_030012
+```
+
+### Voraussetzungen
+
+```bash
+# rsync installieren (Debian/Ubuntu)
+sudo apt-get install rsync
+
+# btrfs-progs (für Btrfs-Snapshots)
+sudo apt-get install btrfs-progs
+
+# lvm2 (für LVM-Snapshots)
+sudo apt-get install lvm2
+```
+
+---
+
+## System-Last-Prüfung
+
+**NEU in v1.8.0:** Das Script kann Updates verweigern wenn das System stark ausgelastet ist.
+
+### Anwendungsfall
+
+Nützlich auf Servern, die zu bestimmten Zeiten stark belastet sind – z.B. verhindert die Prüfung, dass ein Cron-Job-Update während Spitzenlast startet.
+
+### Konfiguration
+
+```bash
+# In config.conf:
+
+# Load-Check aktivieren (Standard: false)
+UPDATE_LOAD_CHECK=true
+
+# Maximale 1-Minuten-Last (Standard: 2.0)
+UPDATE_MAX_LOAD="2.0"
+```
+
+### Beispiel
+
+```bash
+# System-Last OK:
+# [INFO] System-Last akzeptabel (0.8) - Update wird gestartet
+
+# System-Last zu hoch:
+# [WARNUNG] System-Last zu hoch (3.4 > 2.0) - Update wird abgebrochen
+```
+
+Bei zu hoher Last wird das Script mit Exit-Code 1 beendet – ein Cron-Job-Update wird beim nächsten geplanten Zeitpunkt erneut versucht.
+
+---
+
 ## Sicherheitshinweise
 
 - Das Script benötigt root-Rechte für System-Updates
@@ -1420,11 +1574,14 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.7.0 (2026-03-13) - Hooks & Automation + Debian Upgrade
+### Aktuelle Version: 1.8.0 (2026-04-04) - Backup & Optimierung
 
 **Highlights:**
-- ✅ **NEU: Hook-System** – eigene Scripts vor/nach Updates (`/etc/update-hooks/pre.d/`, `post.d/`)
-- ✅ **NEU: Nativer Debian-Upgrade** – automatischer Workflow ohne Ubuntu-Tools
+- ✅ **NEU: Backup-Integration** – LVM, Btrfs, ZFS, rsync mit automatischer Rotation
+- ✅ **NEU: System-Last-Prüfung** – Update-Abbruch bei hoher CPU-Last
+- ✅ **NEU: Laufwerk-Prüfung** – warnt bei Backup auf gleichem Laufwerk, prüft freien Speicher
+- ✅ Hook-System – eigene Scripts vor/nach Updates (v1.7.0)
+- ✅ Nativer Debian-Upgrade-Workflow (v1.7.0)
 - ✅ NVIDIA-Kompatibilitätsprüfung mit Secure Boot & Kernel-Hold (v1.6.0)
 - ✅ XDG-konforme Config in `~/.config/` (v1.6.0)
 - ✅ Desktop-Benachrichtigungen (v1.5.1)
