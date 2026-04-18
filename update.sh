@@ -67,6 +67,13 @@ BACKUP_BEFORE_UPGRADE=true
 UPDATE_LOAD_CHECK=false
 UPDATE_MAX_LOAD="2.0"
 
+# Netzwerk & Fortschritt (v1.9.0)
+BANDWIDTH_LIMIT="auto"
+BANDWIDTH_LIMIT_PERCENT=80
+BANDWIDTH_TEST_URL=""
+ENABLE_PROGRESS=true
+EFFECTIVE_BANDWIDTH_LIMIT=""
+
 # Config-Migration Funktion (wird nach load_language aufgerufen)
 migrate_config() {
     local needs_migration=false
@@ -2112,25 +2119,145 @@ perform_upgrade() {
     esac
 }
 
+#############################################################
+# Netzwerk & Fortschritt (v1.9.0)
+#############################################################
+
+SPINNER_PID=""
+
+start_spinner() {
+    local message="$1"
+    if [ "${ENABLE_PROGRESS:-true}" != "true" ] || [ ! -t 2 ]; then
+        return 0
+    fi
+    (
+        local i=0
+        local chars='-\|/'
+        while true; do
+            printf "\r%s %s " "$message" "${chars:$i:1}" >&2
+            i=$(( (i + 1) % 4 ))
+            sleep 0.15
+        done
+    ) &
+    SPINNER_PID=$!
+}
+
+stop_spinner() {
+    if [ -n "${SPINNER_PID:-}" ]; then
+        kill "$SPINNER_PID" 2>/dev/null
+        wait "$SPINNER_PID" 2>/dev/null
+        printf "\r\033[K" >&2
+        SPINNER_PID=""
+    fi
+}
+
+get_bandwidth_test_url() {
+    if [ -n "${BANDWIDTH_TEST_URL:-}" ]; then
+        echo "$BANDWIDTH_TEST_URL"
+        return
+    fi
+    case "$DISTRO" in
+        debian|ubuntu|linuxmint|mint|mx)
+            echo "http://deb.debian.org/debian/ls-lR.gz"
+            ;;
+        rhel|centos|fedora|rocky|almalinux)
+            local fedora_ver
+            fedora_ver=$(rpm -E %fedora 2>/dev/null | grep -E '^[0-9]+$' || echo "41")
+            echo "https://dl.fedoraproject.org/pub/fedora/linux/releases/${fedora_ver}/Everything/x86_64/os/repodata/repomd.xml"
+            ;;
+        opensuse*|sles|suse)
+            echo "https://download.opensuse.org/distribution/openSUSE-stable/repo/oss/repodata/repomd.xml"
+            ;;
+        arch|manjaro|endeavouros|garuda|arcolinux)
+            echo "https://geo.mirror.pkgbuild.com/core/os/x86_64/core.db"
+            ;;
+        void)
+            echo "https://repo-default.voidlinux.org/current/x86_64-repodata"
+            ;;
+        solus)
+            echo "https://mirrors.rit.edu/solus/packages/shannon/eopkg-index.xml.xz"
+            ;;
+        *)
+            echo "http://deb.debian.org/debian/ls-lR.gz"
+            ;;
+    esac
+}
+
+detect_bandwidth() {
+    EFFECTIVE_BANDWIDTH_LIMIT=""
+
+    if [ -z "${BANDWIDTH_LIMIT:-}" ]; then
+        log_info "$MSG_BANDWIDTH_DISABLED"
+        return 0
+    fi
+
+    if [ "${BANDWIDTH_LIMIT}" != "auto" ]; then
+        EFFECTIVE_BANDWIDTH_LIMIT="$BANDWIDTH_LIMIT"
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_BANDWIDTH_MANUAL" "$EFFECTIVE_BANDWIDTH_LIMIT")"
+        return 0
+    fi
+
+    if ! command -v curl &>/dev/null; then
+        log_warning "$MSG_BANDWIDTH_NO_CURL"
+        return 0
+    fi
+
+    local test_url
+    test_url=$(get_bandwidth_test_url)
+
+    start_spinner "$MSG_BANDWIDTH_MEASURING"
+
+    # speed_bytes ist ein Dezimalwert (z.B. "1048576.000") - awk nötig für Float-Arithmetik
+    local speed_bytes
+    speed_bytes=$(curl -s -w "%{speed_download}" -o /dev/null --max-time 5 "$test_url" 2>/dev/null)
+
+    stop_spinner
+
+    if [ -z "$speed_bytes" ] || awk "BEGIN { exit ($speed_bytes > 0) ? 0 : 1 }" 2>/dev/null && [ "$(awk "BEGIN { printf \"%d\", $speed_bytes }" 2>/dev/null)" -le 0 ] 2>/dev/null; then
+        log_warning "$MSG_BANDWIDTH_MEASURE_FAILED"
+        return 0
+    fi
+
+    local percent="${BANDWIDTH_LIMIT_PERCENT:-80}"
+    local speed_kbs
+    speed_kbs=$(awk "BEGIN { printf \"%d\", $speed_bytes / 1024 }")
+    local limit_kbs
+    limit_kbs=$(awk "BEGIN { printf \"%d\", ($speed_bytes / 1024) * ($percent / 100) }")
+
+    if [ "$limit_kbs" -lt 10 ]; then
+        limit_kbs=10
+    fi
+
+    EFFECTIVE_BANDWIDTH_LIMIT="$limit_kbs"
+    # shellcheck disable=SC2059
+    log_info "$(printf "$MSG_BANDWIDTH_DETECTED" "$speed_kbs" "$limit_kbs" "$percent")"
+}
+
 # Update für Debian/Ubuntu/Mint
 update_debian() {
     log_info "$MSG_UPDATE_START_DEBIAN"
 
-    DEBIAN_FRONTEND=noninteractive apt-get update 2>&1 | tee -a "$LOG_FILE"
+    local bw_opts=()
+    if [ -n "${EFFECTIVE_BANDWIDTH_LIMIT:-}" ]; then
+        bw_opts=("-o" "Acquire::http::Dl-Limit=${EFFECTIVE_BANDWIDTH_LIMIT}")
+    fi
+
+    DEBIAN_FRONTEND=noninteractive apt-get update "${bw_opts[@]}" 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_APT_UPDATE_FAILED"
         return 1
     fi
 
-    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y 2>&1 | tee -a "$LOG_FILE"
+    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y "${bw_opts[@]}" 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_APT_UPGRADE_FAILED"
         return 1
     fi
 
-    DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y 2>&1 | tee -a "$LOG_FILE"
+    DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y "${bw_opts[@]}" 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-        log_error "apt-get dist-upgrade fehlgeschlagen"
+        log_error "$MSG_APT_DIST_UPGRADE_FAILED"
         return 1
     fi
 
@@ -2145,9 +2272,14 @@ update_debian() {
 update_redhat() {
     log_info "$MSG_UPDATE_START_REDHAT"
 
+    local bw_opts=()
+    if [ -n "${EFFECTIVE_BANDWIDTH_LIMIT:-}" ]; then
+        bw_opts=("--setopt=throttle=${EFFECTIVE_BANDWIDTH_LIMIT}k")
+    fi
+
     if command -v dnf &> /dev/null; then
         dnf check-update 2>&1 | tee -a "$LOG_FILE"
-        dnf upgrade -y 2>&1 | tee -a "$LOG_FILE"
+        dnf upgrade -y "${bw_opts[@]}" 2>&1 | tee -a "$LOG_FILE"
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             log_error "$MSG_DNF_FAILED"
             return 1
@@ -2155,7 +2287,7 @@ update_redhat() {
         safe_autoremove "dnf"
     elif command -v yum &> /dev/null; then
         yum check-update 2>&1 | tee -a "$LOG_FILE"
-        yum update -y 2>&1 | tee -a "$LOG_FILE"
+        yum update -y "${bw_opts[@]}" 2>&1 | tee -a "$LOG_FILE"
         if [ "${PIPESTATUS[0]}" -ne 0 ]; then
             log_error "$MSG_YUM_FAILED"
             return 1
@@ -2171,6 +2303,18 @@ update_redhat() {
 }
 
 # Update für SUSE
+run_with_trickle() {
+    if [ -n "${EFFECTIVE_BANDWIDTH_LIMIT:-}" ] && command -v trickle &>/dev/null; then
+        trickle -s -d "$EFFECTIVE_BANDWIDTH_LIMIT" "$@"
+    else
+        if [ -n "${EFFECTIVE_BANDWIDTH_LIMIT:-}" ] && ! command -v trickle &>/dev/null; then
+            # shellcheck disable=SC2059
+            log_info "$(printf "$MSG_BANDWIDTH_NO_TRICKLE" "$1")"
+        fi
+        "$@"
+    fi
+}
+
 update_suse() {
     log_info "$MSG_UPDATE_START_SUSE"
 
@@ -2180,7 +2324,7 @@ update_suse() {
         return 1
     fi
 
-    zypper update -y 2>&1 | tee -a "$LOG_FILE"
+    run_with_trickle zypper update -y 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_ZYPPER_UPDATE_FAILED"
         return 1
@@ -2190,7 +2334,6 @@ update_suse() {
     return 0
 }
 
-# Update für Solus
 update_solus() {
     log_info "$MSG_UPDATE_START_SOLUS"
 
@@ -2200,7 +2343,7 @@ update_solus() {
         return 1
     fi
 
-    eopkg upgrade -y 2>&1 | tee -a "$LOG_FILE"
+    run_with_trickle eopkg upgrade -y 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_EOPKG_UPGRADE_FAILED"
         return 1
@@ -2210,36 +2353,55 @@ update_solus() {
     return 0
 }
 
-# Update für Arch Linux
 update_arch() {
     log_info "$MSG_UPDATE_START_ARCH"
 
-    # Paketdatenbank synchronisieren und System aktualisieren
-    pacman -Syu --noconfirm 2>&1 | tee -a "$LOG_FILE"
+    run_with_trickle pacman -Syu --noconfirm 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_PACMAN_FAILED"
         return 1
     fi
 
-    # Optional: Paket-Cache bereinigen (alte Versionen behalten)
     pacman -Sc --noconfirm 2>&1 | tee -a "$LOG_FILE"
 
     log_info "$MSG_UPDATE_SUCCESS"
     return 0
 }
 
-# Update für Void Linux
 update_void() {
     log_info "$MSG_UPDATE_START_VOID"
 
-    # Paketdatenbank synchronisieren und System aktualisieren
-    xbps-install -Su -y 2>&1 | tee -a "$LOG_FILE"
+    run_with_trickle xbps-install -Su -y 2>&1 | tee -a "$LOG_FILE"
     if [ "${PIPESTATUS[0]}" -ne 0 ]; then
         log_error "$MSG_XBPS_FAILED"
         return 1
     fi
 
     log_info "$MSG_UPDATE_SUCCESS"
+    return 0
+}
+
+# Snap-Pakete aktualisieren (distro-unabhängig)
+update_snap() {
+    if ! command -v snap &> /dev/null; then
+        return 0
+    fi
+
+    log_info "$MSG_SNAP_CHECK"
+
+    if systemctl is-active snapd.timer &> /dev/null; then
+        log_info "$MSG_SNAP_AUTO_ACTIVE"
+        return 0
+    fi
+
+    log_info "$MSG_SNAP_REFRESH_START"
+    snap refresh 2>&1 | tee -a "$LOG_FILE"
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        log_error "$MSG_SNAP_REFRESH_FAILED"
+        return 1
+    fi
+
+    log_info "$MSG_SNAP_REFRESH_SUCCESS"
     return 0
 }
 
@@ -2400,6 +2562,9 @@ log "=== Ende Config-Debugging ==="
 # Distribution erkennen
 detect_distro
 
+# Bandbreite messen und Limit setzen (v1.9.0)
+detect_bandwidth
+
 # NVIDIA-Kernel-Kompatibilität prüfen (VOR dem Update!)
 check_nvidia_compatibility
 
@@ -2463,6 +2628,9 @@ case "$DISTRO" in
         exit 1
         ;;
 esac
+
+# Snap-Pakete aktualisieren (falls installiert und Auto-Updates inaktiv)
+update_snap
 
 # Post-Update-Hooks ausführen (immer, unabhängig vom Ergebnis)
 run_post_update_hooks

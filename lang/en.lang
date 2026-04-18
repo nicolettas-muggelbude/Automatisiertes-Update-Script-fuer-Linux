@@ -253,6 +253,23 @@ MSG_BACKUP_SAME_DEVICE="WARNING: Backup target is on the same drive as the syste
 MSG_BACKUP_SAME_DEVICE_OK="Sufficient free space available (%.1f GB free, %.1f GB required) - backup will continue"
 MSG_BACKUP_SAME_DEVICE_LOW="Insufficient free space (%.1f GB free, %.1f GB required for %.1f GB system data +20%%) - backup aborted"
 
+# Network & Progress (v1.9.0)
+MSG_BANDWIDTH_DISABLED="Bandwidth limit disabled (BANDWIDTH_LIMIT empty) - full bandwidth"
+MSG_BANDWIDTH_MANUAL="Bandwidth limit set manually: %s KB/s"
+MSG_BANDWIDTH_MEASURING="Measuring bandwidth..."
+MSG_BANDWIDTH_MEASURE_FAILED="Bandwidth measurement failed - no limit applied"
+MSG_BANDWIDTH_DETECTED="Measured bandwidth: %s KB/s - limit set to %s KB/s (%s%%)"
+MSG_BANDWIDTH_NO_CURL="curl not found - bandwidth measurement skipped"
+MSG_BANDWIDTH_NO_TRICKLE="No native bandwidth limit for %s - trickle not found, continuing without limit"
+MSG_APT_DIST_UPGRADE_FAILED="apt-get dist-upgrade failed"
+
+# Snap (v1.8.1)
+MSG_SNAP_CHECK="Checking snap packages..."
+MSG_SNAP_AUTO_ACTIVE="Snap auto-updates active (snapd.timer running) - skipping manual refresh"
+MSG_SNAP_REFRESH_START="Starting snap refresh (auto-updates inactive)..."
+MSG_SNAP_REFRESH_SUCCESS="Snap packages updated successfully"
+MSG_SNAP_REFRESH_FAILED="Snap refresh failed"
+
 # Load Check (v1.8.0)
 MSG_LOAD_CHECK_HIGH="System load too high (%s > %s) - update will be aborted"
 MSG_LOAD_CHECK_OK="System load acceptable (%s) - starting update"

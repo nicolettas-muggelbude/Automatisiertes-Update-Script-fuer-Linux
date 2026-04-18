@@ -253,6 +253,23 @@ MSG_BACKUP_SAME_DEVICE="WARNUNG: Backup-Ziel liegt auf demselben Laufwerk wie da
 MSG_BACKUP_SAME_DEVICE_OK="Genug freier Speicher vorhanden (%.1f GB frei, %.1f GB benötigt) - Backup wird fortgesetzt"
 MSG_BACKUP_SAME_DEVICE_LOW="Zu wenig freier Speicher (%.1f GB frei, %.1f GB benötigt für %.1f GB Systemdaten +20%%) - Backup abgebrochen"
 
+# Netzwerk & Fortschritt (v1.9.0)
+MSG_BANDWIDTH_DISABLED="Bandbreitenlimit deaktiviert (BANDWIDTH_LIMIT leer) - volle Bandbreite"
+MSG_BANDWIDTH_MANUAL="Bandbreitenlimit manuell gesetzt: %s KB/s"
+MSG_BANDWIDTH_MEASURING="Bandbreite wird gemessen..."
+MSG_BANDWIDTH_MEASURE_FAILED="Bandbreitenmessung fehlgeschlagen - kein Limit gesetzt"
+MSG_BANDWIDTH_DETECTED="Gemessene Bandbreite: %s KB/s - Limit gesetzt auf %s KB/s (%s%%)"
+MSG_BANDWIDTH_NO_CURL="curl nicht gefunden - Bandbreitenmessung übersprungen"
+MSG_BANDWIDTH_NO_TRICKLE="Kein natives Bandbreitenlimit für %s - trickle nicht gefunden, fahre ohne Limit fort"
+MSG_APT_DIST_UPGRADE_FAILED="apt-get dist-upgrade fehlgeschlagen"
+
+# Snap (v1.8.1)
+MSG_SNAP_CHECK="Prüfe Snap-Pakete..."
+MSG_SNAP_AUTO_ACTIVE="Snap Auto-Updates aktiv (snapd.timer läuft) - überspringe manuelles Refresh"
+MSG_SNAP_REFRESH_START="Starte Snap-Refresh (Auto-Updates inaktiv)..."
+MSG_SNAP_REFRESH_SUCCESS="Snap-Pakete erfolgreich aktualisiert"
+MSG_SNAP_REFRESH_FAILED="Snap-Refresh fehlgeschlagen"
+
 # Load-Check (v1.8.0)
 MSG_LOAD_CHECK_HIGH="System-Last zu hoch (%s > %s) - Update wird abgebrochen"
 MSG_LOAD_CHECK_OK="System-Last akzeptabel (%s) - Update wird gestartet"

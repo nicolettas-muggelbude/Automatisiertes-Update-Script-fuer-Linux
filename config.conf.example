@@ -79,3 +79,36 @@ NVIDIA_ALLOW_UNSUPPORTED_KERNEL=false
 # - false: User wird gefragt ob Module signiert werden sollen
 # Hinweis: MOK-Keys müssen bereits mit mokutil enrollt sein
 NVIDIA_AUTO_MOK_SIGN=false
+
+# =============================================================
+# Netzwerk & Fortschritt (v1.9.0)
+# =============================================================
+
+# Bandbreitenlimit für Downloads (auto|""|KB/s)
+#
+#   auto   - Bandbreite wird vor jedem Update automatisch gemessen.
+#            Gemessene Geschwindigkeit × BANDWIDTH_LIMIT_PERCENT wird als Limit gesetzt.
+#            Empfohlen: verhindert vollständige Auslastung der Verbindung.
+#
+#   ""     - Kein Limit, volle Bandbreite. Messung wird komplett übersprungen.
+#            Sinnvoll wenn Updates gezielt mit maximaler Geschwindigkeit laufen sollen.
+#
+#   "500"  - Festes Limit in KB/s (hier: 500 KB/s).
+#            Für Power-User die eine exakte Kontrolle benötigen.
+#            Keine automatische Messung bei festem Wert.
+BANDWIDTH_LIMIT="auto"
+
+# Prozent der gemessenen Bandbreite als Limit (Standard: 80)
+# Nur relevant wenn BANDWIDTH_LIMIT="auto"
+# Empfohlen: 70-85% damit andere Netzwerkaktivität nicht blockiert wird
+BANDWIDTH_LIMIT_PERCENT=80
+
+# Eigene Test-URL für Bandbreitenmessung (leer = automatisch per Distro)
+# Nur relevant wenn BANDWIDTH_LIMIT="auto"
+# Muss eine direkt downloadbare Datei sein (kein Redirect zu Login-Seiten)
+# Beispiel: BANDWIDTH_TEST_URL="http://meinmirror.intern/testfile.bin"
+BANDWIDTH_TEST_URL=""
+
+# Fortschrittsanzeige aktivieren (true/false)
+# Zeigt Spinner bei Operationen ohne eigene Ausgabe (z.B. Bandbreitenmessung)
+ENABLE_PROGRESS=true
