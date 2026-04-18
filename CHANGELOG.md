@@ -7,6 +7,41 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-04-18
+
+### Hinzugefügt
+- **Automatische Bandbreitenmessung**: Vor jedem Update wird die verfügbare Netzwerkbandbreite gemessen
+  - `detect_bandwidth()` – misst via `curl` gegen distro-spezifischen Mirror (max. 5 Sekunden)
+  - Distro-Mapping: Debian/Ubuntu → deb.debian.org, Fedora → dl.fedoraproject.org, openSUSE → download.opensuse.org, Arch → geo.mirror.pkgbuild.com, Void → repo-default.voidlinux.org, Solus → mirrors.rit.edu
+  - `get_bandwidth_test_url()` – wählt automatisch den passenden Mirror per Distro
+- **Bandbreitenlimitierung**: Download-Geschwindigkeit wird automatisch begrenzt
+  - Debian/Ubuntu/Mint: natives `Acquire::http::Dl-Limit` für apt
+  - Fedora/RHEL: natives `--setopt=throttle` für dnf/yum
+  - Arch, openSUSE, Void, Solus: `trickle`-Fallback (falls installiert), sonst Info-Meldung
+  - `run_with_trickle()` – generischer Wrapper für Paketmanager ohne natives Limit
+- **3 Betriebsmodi** (konfigurierbar):
+  - `auto` (Standard) – automatische Messung, Limit = gemessene Bandbreite × `BANDWIDTH_LIMIT_PERCENT`
+  - `""` (leer) – volle Bandbreite, Messung wird komplett übersprungen
+  - `"500"` – fester Wert in KB/s, keine Messung
+- **Update-Zeitschätzung**: Vor dem Update wird eine Dauer geschätzt und ausgegeben
+  - `estimate_update_time()` – ermittelt Paketanzahl und Downloadgröße per Dry-Run
+  - `parse_download_size_mb()` – parst Größenangaben (B/kB/MB/GB) aus apt/dnf-Ausgabe
+  - `format_duration()` – Zeitformatierung in Sek/Min/Std (mehrsprachig)
+  - Ausgabe: `Schätzung: 47 Pakete, ~180 MB - voraussichtlich ~3 Min`
+  - Ohne Größeninfo (Arch, openSUSE, Void, Solus): `Schätzung: 12 Pakete - voraussichtlich ~1 Min`
+- **Fortschritts-Spinner**: Visuelle Rückmeldung bei Operationen ohne eigene Ausgabe
+  - `start_spinner()` / `stop_spinner()` – Hintergrundprozess auf stderr
+  - Graceful: deaktiviert sich automatisch ohne Terminal (Cron-Jobs)
+- **Snap-Paket-Check**: `update_snap()` – erkennt ob `snapd.timer` aktiv ist
+  - Überspringt manuelles Refresh wenn Auto-Updates laufen
+  - Führt `snap refresh` aus wenn Snap installiert aber Auto-Updates inaktiv
+- **4 neue Konfigurationsparameter**: `BANDWIDTH_LIMIT`, `BANDWIDTH_LIMIT_PERCENT`, `BANDWIDTH_TEST_URL`, `ENABLE_PROGRESS`
+- **23 neue Sprachmeldungen** (DE + EN)
+
+### Verbessert
+- `config.conf.example` vollständig mit allen v1.9.0-Parametern dokumentiert
+- `apt-get dist-upgrade` Fehler jetzt über `MSG_APT_DIST_UPGRADE_FAILED` lokalisiert
+
 ## [1.8.0] - 2026-04-04
 
 ### Hinzugefügt

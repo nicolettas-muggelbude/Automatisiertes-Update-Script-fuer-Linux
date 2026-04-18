@@ -4,9 +4,10 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.8.0 - Backup & Optimierung (Released: 2026-04-04)
+v1.9.0 - Netzwerk & Fortschritt (Released: 2026-04-18)
 
 ## Vorherige Versionen
+- v1.8.0 - Backup & Optimierung (Released: 2026-04-04)
 - v1.7.0 - Hooks & Automation (Released: 2026-03-13)
 - v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot (Released: 2026-01-25)
 - v1.5.1 - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)

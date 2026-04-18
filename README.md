@@ -19,6 +19,9 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 
 ## Features
 
+- ✅ **Bandbreitenmessung & -limit**: Automatische Messung + intelligentes Limit vor jedem Update (v1.9.0)
+- ✅ **Update-Zeitschätzung**: Paketanzahl, Downloadgröße und voraussichtliche Dauer vor dem Start (v1.9.0)
+- ✅ **Snap-Check**: Erkennt automatisch ob Snap-Updates nötig sind (v1.9.0)
 - ✅ **Backup-Integration**: Automatische Backups vor Updates – LVM, Btrfs, ZFS, rsync (v1.8.0)
 - ✅ **System-Last-Prüfung**: Update-Abbruch bei hoher CPU-Last (v1.8.0)
 - ✅ **Hooks & Automation**: Eigene Scripts vor/nach Updates (Pre/Post-Hooks) (v1.7.0)
@@ -254,11 +257,14 @@ sudo ./update.sh
 
 Das Script führt automatisch folgende Schritte durch:
 1. System-Last prüfen (optional, v1.8.0)
-2. Backup erstellen (optional, v1.8.0)
-3. System-Updates installieren
-4. Prüfung auf verfügbare Distribution-Upgrades
-5. Optional: E-Mail-Benachrichtigung versenden
-6. Optional: Desktop-Benachrichtigung anzeigen
+2. Bandbreite messen und Limit setzen (v1.9.0)
+3. Update-Zeitschätzung ausgeben (v1.9.0)
+4. Backup erstellen (optional, v1.8.0)
+5. System-Updates installieren
+6. Snap-Pakete prüfen und aktualisieren (v1.9.0)
+7. Prüfung auf verfügbare Distribution-Upgrades
+8. Optional: E-Mail-Benachrichtigung versenden
+9. Optional: Desktop-Benachrichtigung anzeigen
 
 ### Distribution-Upgrade durchführen
 
@@ -1402,6 +1408,67 @@ sudo dkms autoinstall
 sudo dkms autoinstall -k 6.5.0-35-generic
 ```
 
+## Bandbreitenmessung & -limitierung
+
+**NEU in v1.9.0:** Das Script misst vor jedem Update die verfügbare Netzwerkbandbreite und begrenzt den Download automatisch.
+
+### Warum?
+
+Ohne Limit können Updates die gesamte Verbindung belegen – besonders auf Servern oder bei geteilten Verbindungen ein Problem. Das Script misst die aktuelle Bandbreite und setzt automatisch ein sinnvolles Limit (Standard: 80% der gemessenen Geschwindigkeit).
+
+### 3 Modi
+
+| Modus | Beschreibung |
+|-------|-------------|
+| `auto` (Standard) | Bandbreite wird vor jedem Update gemessen, Limit = Messung × `BANDWIDTH_LIMIT_PERCENT` |
+| `""` (leer) | Volle Bandbreite – Messung wird komplett übersprungen |
+| `"500"` | Fester Wert in KB/s – keine Messung |
+
+### Konfiguration
+
+```bash
+# In config.conf:
+
+# Modus (Standard: auto)
+BANDWIDTH_LIMIT="auto"
+
+# Prozent der gemessenen Bandbreite als Limit (Standard: 80)
+# 80% empfohlen: lässt 20% für andere Netzwerkaktivität
+BANDWIDTH_LIMIT_PERCENT=80
+
+# Eigene Test-URL (leer = automatisch per Distro)
+# Nur bei BANDWIDTH_LIMIT="auto" relevant
+BANDWIDTH_TEST_URL=""
+
+# Fortschrittsanzeige (Spinner) aktivieren
+ENABLE_PROGRESS=true
+```
+
+### Beispiel-Ausgabe
+
+```
+[INFO] Bandbreite wird gemessen... /
+[INFO] Gemessene Bandbreite: 45230 KB/s - Limit gesetzt auf 36184 KB/s (80%)
+[INFO] Schätzung: 23 Pakete, ~87 MB - voraussichtlich ~2 Min
+```
+
+### Unterstützung nach Paketmanager
+
+| Paketmanager | Limit-Methode |
+|---|---|
+| apt (Debian/Ubuntu/Mint) | Nativ: `Acquire::http::Dl-Limit` |
+| dnf/yum (Fedora/RHEL) | Nativ: `--setopt=throttle` |
+| pacman, zypper, xbps, eopkg | `trickle` (falls installiert), sonst kein Limit |
+
+```bash
+# trickle installieren für Arch/openSUSE/Void/Solus:
+sudo pacman -S trickle          # Arch
+sudo zypper install trickle     # openSUSE
+sudo xbps-install trickle       # Void
+```
+
+---
+
 ## Backup-Integration
 
 **NEU in v1.8.0:** Das Script kann automatisch Backups vor Updates erstellen.
@@ -1574,19 +1641,20 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.8.0 (2026-04-04) - Backup & Optimierung
+### Aktuelle Version: 1.9.0 (2026-04-18) - Netzwerk & Fortschritt
 
 **Highlights:**
-- ✅ **NEU: Backup-Integration** – LVM, Btrfs, ZFS, rsync mit automatischer Rotation
-- ✅ **NEU: System-Last-Prüfung** – Update-Abbruch bei hoher CPU-Last
-- ✅ **NEU: Laufwerk-Prüfung** – warnt bei Backup auf gleichem Laufwerk, prüft freien Speicher
-- ✅ Hook-System – eigene Scripts vor/nach Updates (v1.7.0)
+- ✅ **NEU: Automatische Bandbreitenmessung** – misst vor jedem Update, setzt intelligentes Limit
+- ✅ **NEU: Update-Zeitschätzung** – Paketanzahl, MB und voraussichtliche Dauer
+- ✅ **NEU: Snap-Check** – erkennt ob manuelle Snap-Updates nötig sind
+- ✅ Backup-Integration – LVM, Btrfs, ZFS, rsync (v1.8.0)
+- ✅ System-Last-Prüfung (v1.8.0)
+- ✅ Hook-System – Pre/Post-Update hooks (v1.7.0)
 - ✅ Nativer Debian-Upgrade-Workflow (v1.7.0)
 - ✅ NVIDIA-Kompatibilitätsprüfung mit Secure Boot & Kernel-Hold (v1.6.0)
 - ✅ XDG-konforme Config in `~/.config/` (v1.6.0)
 - ✅ Desktop-Benachrichtigungen (v1.5.1)
-- ✅ Upgrade-Check System (v1.5.0)
-- ✅ Kernel-Schutz (v1.5.0)
+- ✅ Upgrade-Check System & Kernel-Schutz (v1.5.0)
 - ✅ ShellCheck-konform (keine Warnungen)
 
 **Siehe [CHANGELOG.md](CHANGELOG.md) für alle Details**

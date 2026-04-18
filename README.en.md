@@ -19,6 +19,9 @@ Automated update script for various Linux distributions with optional email noti
 
 ## Features
 
+- ✅ **Bandwidth Measurement & Limit**: Automatic measurement + intelligent limit before every update (v1.9.0)
+- ✅ **Update Time Estimate**: Package count, download size and expected duration before start (v1.9.0)
+- ✅ **Snap Check**: Automatically detects whether Snap updates are needed (v1.9.0)
 - ✅ **Backup Integration**: Automatic backups before updates – LVM, Btrfs, ZFS, rsync (v1.8.0)
 - ✅ **System Load Check**: Abort update when CPU load is too high (v1.8.0)
 - ✅ **Hooks & Automation**: Pre/Post-Update hooks for services, backups, monitoring (v1.7.0)
@@ -254,11 +257,14 @@ sudo ./update.sh
 
 The script automatically performs the following steps:
 1. Check system load (optional, v1.8.0)
-2. Create backup (optional, v1.8.0)
-3. Install system updates
-4. Check for available distribution upgrades
-5. Optional: Send email notification
-6. Optional: Show desktop notification
+2. Measure bandwidth and set limit (v1.9.0)
+3. Output update time estimate (v1.9.0)
+4. Create backup (optional, v1.8.0)
+5. Install system updates
+6. Check and update Snap packages (v1.9.0)
+7. Check for available distribution upgrades
+8. Optional: Send email notification
+9. Optional: Show desktop notification
 
 ### Performing Distribution Upgrade
 
@@ -1495,6 +1501,65 @@ sudo apt-get install lvm2
 
 ---
 
+## Bandwidth Measurement & Limiting
+
+**NEW in v1.9.0:** The script measures available network bandwidth before every update and automatically limits downloads.
+
+### Why?
+
+Without a limit, updates can saturate the entire connection – especially problematic on servers or shared connections. The script measures the current bandwidth and sets a sensible limit automatically (default: 80% of measured speed).
+
+### 3 Modes
+
+| Mode | Description |
+|------|-------------|
+| `auto` (default) | Bandwidth is measured before every update, limit = measurement × `BANDWIDTH_LIMIT_PERCENT` |
+| `""` (empty) | Full bandwidth – measurement is completely skipped |
+| `"500"` | Fixed value in KB/s – no measurement |
+
+### Configuration
+
+```bash
+# In config.conf:
+
+# Mode (default: auto)
+BANDWIDTH_LIMIT="auto"
+
+# Percentage of measured bandwidth as limit (default: 80)
+BANDWIDTH_LIMIT_PERCENT=80
+
+# Custom test URL (empty = automatic per distro)
+BANDWIDTH_TEST_URL=""
+
+# Enable progress spinner
+ENABLE_PROGRESS=true
+```
+
+### Example Output
+
+```
+[INFO] Measuring bandwidth... /
+[INFO] Measured bandwidth: 45230 KB/s - limit set to 36184 KB/s (80%)
+[INFO] Estimate: 23 packages, ~87 MB - expected ~2 min
+```
+
+### Support by Package Manager
+
+| Package Manager | Limit Method |
+|---|---|
+| apt (Debian/Ubuntu/Mint) | Native: `Acquire::http::Dl-Limit` |
+| dnf/yum (Fedora/RHEL) | Native: `--setopt=throttle` |
+| pacman, zypper, xbps, eopkg | `trickle` (if installed), otherwise no limit |
+
+```bash
+# Install trickle for Arch/openSUSE/Void/Solus:
+sudo pacman -S trickle          # Arch
+sudo zypper install trickle     # openSUSE
+sudo xbps-install trickle       # Void
+```
+
+---
+
 ## System Load Check
 
 **NEW in v1.8.0:** The script can refuse to start updates when the system is heavily loaded.
@@ -1576,17 +1641,20 @@ For problems or questions:
 
 The complete version history can be found in the [CHANGELOG.md](CHANGELOG.md) file.
 
-### Current Version: 1.8.0 (2026-04-04) - Backup Integration & Optimization
+### Current Version: 1.9.0 (2026-04-18) - Network & Progress
 
 **Highlights:**
-- ✅ **NEW: Backup Integration** – LVM, Btrfs, ZFS, rsync with automatic rotation
-- ✅ **NEW: System Load Check** – abort update when CPU load is too high
-- ✅ **NEW: Drive Check** – warns when backup is on the same drive, checks free space
+- ✅ **NEW: Automatic Bandwidth Measurement** – measures before every update, sets intelligent limit
+- ✅ **NEW: Update Time Estimate** – package count, MB and expected duration
+- ✅ **NEW: Snap Check** – detects whether manual Snap updates are needed
+- ✅ Backup Integration – LVM, Btrfs, ZFS, rsync (v1.8.0)
+- ✅ System Load Check (v1.8.0)
 - ✅ Hooks System – Pre/Post-Update hooks (v1.7.0)
 - ✅ Debian Native Upgrade workflow (v1.7.0)
 - ✅ NVIDIA Secure Boot & Kernel Hold (v1.6.0)
 - ✅ XDG Compliance (v1.6.0)
 - ✅ Desktop Notifications (v1.5.1)
+- ✅ Upgrade Check System & Kernel Protection (v1.5.0)
 - ✅ Upgrade Check System (v1.5.0)
 - ✅ Kernel Protection (v1.5.0)
 - ✅ ShellCheck-compliant (zero warnings)

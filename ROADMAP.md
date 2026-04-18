@@ -638,48 +638,42 @@ UPDATE_MAX_LOAD="2.0"         # Maximale 1-Minuten-Last
 
 ---
 
-## Version 1.9.0 - Netzwerk & Fortschritt
+## Version 1.9.0 - Netzwerk & Fortschritt ✅
 
-**Status:** 📋 Konzeptphase
+**Status:** ✅ Implementiert (Released: 2026-04-18)
 
-### 🌐 Bandwidth-Limit
+### 🌐 Automatische Bandbreitenmessung & -limitierung
 
-**Motivation:**
-Updates sollen die verfügbare Netzwerkbandbreite nicht vollständig belegen – besonders relevant für Server im Produktivbetrieb oder Heimanwender mit langsamer Leitung.
+- ✅ `detect_bandwidth()` – misst Bandbreite via `curl` vor jedem Update (max. 5 Sek)
+- ✅ `get_bandwidth_test_url()` – wählt distro-spezifischen Mirror automatisch
+- ✅ Natives Limit: apt (`Acquire::http::Dl-Limit`), dnf/yum (`--setopt=throttle`)
+- ✅ `run_with_trickle()` – Fallback für Arch, openSUSE, Void, Solus
+- ✅ 3 Modi: `auto` (Standard), `""` (volle Bandbreite), fester KB/s-Wert
 
-**Geplante Features:**
-- Konfigurierbare Download-Geschwindigkeit pro Paketmanager
-- Distributionsspezifische Implementierung:
-  * Debian/Ubuntu: `apt-get -o Acquire::http::Dl-Limit=<KB/s>`
-  * RHEL/Fedora: `dnf --setopt=throttle=<KB/s>`
-  * Arch: `pacman --disable-download-timeout` + `trickle` (extern)
-  * openSUSE: `zypper --pkg-cache-dir` + Bandbreitenlimit über Konfiguration
-- Deaktiviert wenn kein Limit gesetzt (`BANDWIDTH_LIMIT=""`)
-
-**Konfiguration (geplant):**
+**Konfiguration:**
 ```bash
-# Bandwidth-Limit in KB/s (leer = kein Limit)
-BANDWIDTH_LIMIT=""         # Kein Limit (Standard)
-BANDWIDTH_LIMIT="500"      # 500 KB/s
-BANDWIDTH_LIMIT="2000"     # 2 MB/s
+BANDWIDTH_LIMIT="auto"       # auto | "" | "500" (KB/s)
+BANDWIDTH_LIMIT_PERCENT=80   # Prozent der gemessenen Bandbreite
+BANDWIDTH_TEST_URL=""        # leer = automatisch per Distro
 ```
 
-### 📊 Fortschrittsanzeige
+### 📊 Update-Zeitschätzung & Fortschritt
 
-**Motivation:**
-Lange Updates geben keinen Hinweis auf den Fortschritt – besonders bei großen Distribution-Upgrades oder vielen Paketen ist eine Rückmeldung hilfreich.
+- ✅ `estimate_update_time()` – Paketanzahl + Downloadgröße per Dry-Run
+- ✅ `parse_download_size_mb()` – parst B/kB/MB/GB aus apt/dnf-Ausgabe
+- ✅ `format_duration()` – Zeitformatierung Sek/Min/Std (mehrsprachig)
+- ✅ `start_spinner()` / `stop_spinner()` – Spinner bei stillen Operationen
+- ✅ Graceful: kein Spinner bei Cron-Jobs (kein Terminal)
 
-**Geplante Features:**
-- Einfacher Spinner für laufende Operationen (ohne externe Abhängigkeiten)
-- Paket-Zähler: „Paket 12 von 47 wird installiert..."
-- Optionale `pv`-Integration für Datenstrom-Fortschritt (wenn installiert)
-- Graceful Degradation: funktioniert auch ohne `pv`
-
-**Konfiguration (geplant):**
+**Konfiguration:**
 ```bash
-# Fortschrittsanzeige aktivieren (true/false)
 ENABLE_PROGRESS=true
 ```
+
+### 🔄 Snap-Paket-Check
+
+- ✅ `update_snap()` – erkennt ob `snapd.timer` aktiv (Auto-Updates)
+- ✅ Führt `snap refresh` aus wenn Snap installiert aber Auto-Updates inaktiv
 
 ---
 
@@ -884,12 +878,12 @@ Features werden priorisiert nach:
 - **v1.6.0** ✅ - **XDG-Konformität, Config-Migration & NVIDIA-Prüfung** (Implementiert: 2026-01-24)
 - **v1.7.0** ✅ - Hooks & Automation (Pre/Post-Update Hooks) (Released: 2026-03-13)
 - **v1.8.0** ✅ - Backup-Integration & Load-Check (Released: 2026-04-04)
-- **v1.9.0** 📋 - Bandwidth-Limit & Fortschrittsanzeige
+- **v1.9.0** ✅ - Bandbreitenmessung, Zeitschätzung & Snap-Check (Released: 2026-04-18)
 - **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
 
 ### Architektur-Strategie
 
-**v1.5.0 - v1.9.0:** Monolithische Architektur beibehalten
+**v1.5.0 - v1.9.0:** ✅ Monolithische Architektur beibehalten
 - ✅ Aktuell überschaubar und stabil
 - ✅ Einfach für Contributors
 - ✅ Community-Feedback sammeln
@@ -901,4 +895,4 @@ Features werden priorisiert nach:
 - 🏗️ Migration-Script für User
 - 🏗️ 6 Monate Support für v1.x
 
-Letzte Aktualisierung: 2026-04-04
+Letzte Aktualisierung: 2026-04-18
