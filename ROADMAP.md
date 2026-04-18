@@ -677,168 +677,84 @@ ENABLE_PROGRESS=true
 
 ---
 
-## Version 2.0.0 - Major Refactoring & Enterprise Features
+## Versions-Strategie ab v2.0.0
 
-⚠️ **Breaking Changes:** Version 2.0.0 ist eine Major-Version mit Breaking Changes zur Codebasis-Modernisierung.
+### Warum eine neue Strategie?
 
-### 🏗️ Code-Architektur Refactoring (Priority)
+v1.9.0 ist feature-complete für Desktop- und Heimanwender. Enterprise-Features (Container, Multi-System, Webhooks) würden für die meisten User unnötige Komplexität bedeuten. Daher wird ab v2.0.0 eine klare Trennung eingeführt:
 
-**Motivation:**
-Nach v1.8.0 wird `update.sh` voraussichtlich >1000 Zeilen haben. Für Enterprise-Features (Container, Multi-System) ist eine modulare Architektur erforderlich.
-
-#### 1. Neue modulare Struktur
-
-**Aktuell (v1.5.0 - v1.8.0):**
-```
-update-script/
-├── update.sh              # Monolithisch (~1200 Zeilen nach v1.8)
-├── config.conf
-└── lang/
-```
-
-**Neu (v2.0.0):**
-```
-update-script/
-├── update.sh              # Hauptscript (klein, nur Orchestrierung)
-├── config.conf            # Konfiguration
-├── lib/                   # Modulare Bibliotheken
-│   ├── core.sh           # Basis-Funktionen (logging, colors, etc.)
-│   ├── distros.sh        # Distribution-Updates
-│   ├── upgrades.sh       # Upgrade-Check System
-│   ├── kernel.sh         # Kernel-Schutz
-│   ├── notifications.sh  # E-Mail & Desktop-Notifications
-│   ├── hooks.sh          # Pre/Post-Update Hooks
-│   ├── backup.sh         # Backup-Integration
-│   ├── containers.sh     # Container-Support (neu)
-│   └── remote.sh         # Multi-System Management (neu)
-├── lang/                  # Sprachdateien (bleibt unverändert)
-└── tests/                 # Unit-Tests (neu!)
-    ├── test_core.sh
-    ├── test_distros.sh
-    ├── test_upgrades.sh
-    └── test_notifications.sh
-```
-
-#### 2. Test-Framework
-
-**Framework:** [bats-core](https://github.com/bats-core/bats-core) (Bash Automated Testing System)
-
-**Beispiel Test:**
-```bash
-# tests/test_upgrades.sh
-@test "check_upgrade_debian detects available upgrade" {
-  # Mock do-release-upgrade output
-  function do-release-upgrade() {
-    echo "New release '24.04' available."
-  }
-  export -f do-release-upgrade
-
-  run check_upgrade_debian
-  [ "$status" -eq 3 ]  # Return code 3 = Upgrade available
-}
-```
-
-**Ziel:** >80% Test-Coverage
-
-#### 3. Migration-Strategie
-
-**Backwards-Compatibility:**
-- `update.sh` bleibt Haupteinstiegspunkt
-- Alte `config.conf` wird automatisch konvertiert
-- Migration-Script: `migrate-to-v2.sh`
-
-**Migration-Guide:**
-```bash
-# Automatische Migration
-sudo ./migrate-to-v2.sh
-
-# Manuelle Migration
-cp config.conf config.conf.backup
-./update.sh --migrate-config
-```
-
-#### 4. Vorteile der neuen Architektur
-
-**Entwicklung:**
-- ✅ Modulare Entwicklung (Contributors arbeiten parallel)
-- ✅ Unit-Tests für jedes Modul
-- ✅ Wiederverwendbare Komponenten
-- ✅ Klare Verantwortlichkeiten (SoC - Separation of Concerns)
-
-**Wartung:**
-- ✅ Einfacheres Debugging
-- ✅ Bessere Code-Navigation
-- ✅ Weniger Merge-Konflikte
-- ✅ Schnellere Feature-Entwicklung
-
-**Qualität:**
-- ✅ Höhere Test-Coverage
-- ✅ Bessere Dokumentation pro Modul
-- ✅ ShellCheck pro Datei
-- ✅ Code-Reviews fokussierter
-
-#### 5. Breaking Changes
-
-**Was ändert sich für User:**
-- ⚠️ Installation erfordert `lib/` Verzeichnis
-- ⚠️ Custom-Scripts müssen angepasst werden (wenn sie update.sh sourcen)
-- ⚠️ Neue Abhängigkeit: bats-core (optional, nur für Tests)
-
-**Was bleibt gleich:**
-- ✅ `sudo ./update.sh` funktioniert weiterhin
-- ✅ `config.conf` Format bleibt kompatibel
-- ✅ Alle Features bleiben erhalten
-- ✅ Logs im gleichen Format
-
-#### 6. Implementierungs-Roadmap
-
-**Phase 1:** Planung & Design (vor v2.0.0 Beta)
-- Modul-Grenzen definieren
-- API-Schnittstellen dokumentieren
-- Test-Strategie ausarbeiten
-
-**Phase 2:** Refactoring (v2.0.0 Beta 1)
-- Funktionen in Module aufteilen
-- Tests schreiben
-- CI/CD für Tests einrichten
-
-**Phase 3:** Testing & Migration (v2.0.0 Beta 2)
-- Community-Testing
-- Migration-Script entwickeln
-- Dokumentation aktualisieren
-
-**Phase 4:** Release (v2.0.0 Stable)
-- Migration-Guide veröffentlichen
-- Breaking Changes dokumentieren
-- Support für v1.x für 6 Monate
+| Version | Zielgruppe | Fokus |
+|---------|-----------|-------|
+| **v1.9.x** | Desktop / Heimanwender | Bugfixes, kleinere Verbesserungen — kein neues Feature-Scope |
+| **v2.0.0** | Alle | Reines Refactoring — gleicher Funktionsumfang wie v1.9, modulare Codebasis als Fundament |
+| **v3.0.0** | Server / Power-User | Enterprise-Features (Container, Multi-System, Webhooks) auf Basis von v2.0 |
 
 ---
 
+## Version 2.0.0 - Major Refactoring
+
+**Status:** 📋 Konzeptphase
+
+⚠️ **Kein neuer Feature-Scope.** v2.0.0 ist reines Code-Refactoring — gleiche Funktionen wie v1.9.0, aber modulare, testbare Architektur als Fundament für v3.0.0.
+
+### 🏗️ Neue modulare Struktur
+
+```
+update-script/
+├── update.sh              # Hauptscript (Orchestrierung)
+├── config.conf
+├── lib/
+│   ├── core.sh           # Basis-Funktionen (logging, colors)
+│   ├── distros.sh        # Distribution-Updates
+│   ├── upgrades.sh       # Upgrade-Check System
+│   ├── kernel.sh         # Kernel-Schutz & NVIDIA
+│   ├── notifications.sh  # E-Mail & Desktop-Notifications
+│   ├── hooks.sh          # Pre/Post-Update Hooks
+│   ├── backup.sh         # Backup-Integration
+│   └── network.sh        # Bandbreitenmessung & Snap
+├── lang/
+└── tests/
+    ├── test_core.sh
+    ├── test_distros.sh
+    └── test_network.sh
+```
+
+### 🧪 Test-Framework
+
+- [bats-core](https://github.com/bats-core/bats-core) — Bash Automated Testing System
+- Ziel: >80% Test-Coverage
+- CI/CD für automatische Tests
+
+### 🔄 Migration
+
+- `update.sh` bleibt Haupteinstiegspunkt
+- `config.conf` Format bleibt kompatibel
+- Migration-Script: `migrate-to-v2.sh`
+- Support für v1.9.x: 6 Monate nach v2.0.0 Release
+
+---
+
+## Version 3.0.0 - Enterprise Features
+
+**Status:** 📋 Konzeptphase — wartet auf Community-Feedback und v2.0.0
+
+⚠️ **Nur für Server / Power-User.** Desktop-Anwender bleiben bei v1.9.x oder v2.0.0.
+
 ### 🐳 Container-Support
 
-**Nach Refactoring implementiert in `lib/containers.sh`**
-
-- Docker Container Updates
-- LXC Container Updates
-- Podman Integration
-- Container-Erkennung und automatische Updates
+- Docker, LXC, Podman Container-Updates
+- Automatische Container-Erkennung
 
 ### 🌐 Multi-System Management
 
-**Nach Refactoring implementiert in `lib/remote.sh`**
-
-- Mehrere Systeme zentral verwalten
-- SSH-basiertes Remote-Update
-- Dashboard für Status-Übersicht
-- Parallele Updates über mehrere Hosts
+- SSH-basiertes Remote-Update mehrerer Hosts
+- Parallele Updates
+- Status-Dashboard
 
 ### 📢 Advanced Notifications
 
-**Nach Refactoring erweitert in `lib/notifications.sh`**
-
-- Webhook-Support (Slack, Discord, etc.)
-- Matrix/Element Benachrichtigungen
-- Telegram Bot Integration
+- Webhook-Support (Slack, Discord, Teams)
+- Matrix / Telegram Bot Integration
 - Custom Notification-Backends
 
 ---
@@ -879,20 +795,15 @@ Features werden priorisiert nach:
 - **v1.7.0** ✅ - Hooks & Automation (Pre/Post-Update Hooks) (Released: 2026-03-13)
 - **v1.8.0** ✅ - Backup-Integration & Load-Check (Released: 2026-04-04)
 - **v1.9.0** ✅ - Bandbreitenmessung, Zeitschätzung & Snap-Check (Released: 2026-04-18)
-- **v2.0.0** 🏗️ - **Major Refactoring** + Container-Support + Multi-System Management
+- **v2.0.0** 🏗️ - **Major Refactoring** (modulare Architektur, Tests) — kein neuer Feature-Scope
+- **v3.0.0** 📋 - **Enterprise Features** (Container, Multi-System, Webhooks) — nur für Server/Power-User
 
 ### Architektur-Strategie
 
-**v1.5.0 - v1.9.0:** ✅ Monolithische Architektur beibehalten
-- ✅ Aktuell überschaubar und stabil
-- ✅ Einfach für Contributors
-- ✅ Community-Feedback sammeln
-- ✅ Features etablieren
-
-**v2.0.0:** Modulare Architektur
-- 🏗️ Großes Refactoring (Breaking Changes erlaubt)
-- 🏗️ Test-Framework (bats-core, >80% Coverage)
-- 🏗️ Migration-Script für User
-- 🏗️ 6 Monate Support für v1.x
+| Linie | Versionen | Zielgruppe |
+|-------|-----------|-----------|
+| Desktop-stabil | v1.9.x | Heimanwender, Desktop |
+| Refactoring | v2.0.0 | Alle — sauberes Fundament |
+| Enterprise | v3.0.0 | Server, Power-User |
 
 Letzte Aktualisierung: 2026-04-18
