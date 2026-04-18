@@ -2234,6 +2234,103 @@ detect_bandwidth() {
     log_info "$(printf "$MSG_BANDWIDTH_DETECTED" "$speed_kbs" "$limit_kbs" "$percent")"
 }
 
+parse_download_size_mb() {
+    local line="$1"
+    local value unit
+    value=$(echo "$line" | grep -oE '[0-9][0-9,.]*' | head -1 | tr -d ',')
+    unit=$(echo "$line" | grep -oE '\bGB\b|\bMB\b|\bkB\b|\bB\b' | head -1)
+    case "$unit" in
+        GB) awk "BEGIN { printf \"%.1f\", $value * 1024 }" ;;
+        MB) awk "BEGIN { printf \"%.1f\", $value }" ;;
+        kB) awk "BEGIN { printf \"%.1f\", $value / 1024 }" ;;
+        *)  echo "0" ;;
+    esac
+}
+
+format_duration() {
+    local seconds="$1"
+    if [ "$seconds" -lt 60 ]; then
+        # shellcheck disable=SC2059
+        printf "$MSG_ESTIMATE_SECONDS" "$seconds"
+    elif [ "$seconds" -lt 3600 ]; then
+        # shellcheck disable=SC2059
+        printf "$MSG_ESTIMATE_MINUTES" "$(( seconds / 60 ))"
+    else
+        # shellcheck disable=SC2059
+        printf "$MSG_ESTIMATE_HOURS" "$(( seconds / 3600 ))" "$(( (seconds % 3600) / 60 ))"
+    fi
+}
+
+estimate_update_time() {
+    if [ "${ENABLE_PROGRESS:-true}" != "true" ]; then
+        return 0
+    fi
+
+    local pkg_count=0
+    local download_mb=0
+    local has_size=false
+    local sim_output size_line
+
+    case "$DISTRO" in
+        debian|ubuntu|linuxmint|mint|mx)
+            sim_output=$(DEBIAN_FRONTEND=noninteractive apt-get -s dist-upgrade 2>/dev/null)
+            pkg_count=$(echo "$sim_output" | grep -c "^Inst" || true)
+            size_line=$(echo "$sim_output" | grep "Need to get" || true)
+            if [ -n "$size_line" ]; then
+                download_mb=$(parse_download_size_mb "$size_line")
+                has_size=true
+            fi
+            ;;
+        rhel|centos|fedora|rocky|almalinux)
+            if command -v dnf &>/dev/null; then
+                sim_output=$(dnf upgrade --assumeno 2>/dev/null || true)
+                pkg_count=$(echo "$sim_output" | grep -c "^Upgrading\|^Installing" || true)
+                size_line=$(echo "$sim_output" | grep "Total download size" || true)
+                if [ -n "$size_line" ]; then
+                    download_mb=$(parse_download_size_mb "$size_line")
+                    has_size=true
+                fi
+            fi
+            ;;
+        opensuse*|sles|suse)
+            pkg_count=$(zypper --non-interactive lu 2>/dev/null | grep -c "^v " || true)
+            ;;
+        arch|manjaro|endeavouros|garuda|arcolinux)
+            pkg_count=$(pacman -Qu 2>/dev/null | wc -l || true)
+            ;;
+        void)
+            pkg_count=$(xbps-install -Sun 2>/dev/null | grep -c "will be" || true)
+            ;;
+        solus)
+            pkg_count=$(eopkg list-upgrades 2>/dev/null | wc -l || true)
+            ;;
+    esac
+
+    if [ "$pkg_count" -le 0 ]; then
+        return 0
+    fi
+
+    local install_seconds=$(( pkg_count * 3 ))
+    local total_seconds=$install_seconds
+    local time_str
+
+    if [ "$has_size" = true ] && [ -n "${EFFECTIVE_BANDWIDTH_LIMIT:-}" ] && [ "${EFFECTIVE_BANDWIDTH_LIMIT}" -gt 0 ]; then
+        local download_seconds
+        download_seconds=$(awk "BEGIN { printf \"%d\", ($download_mb * 1024) / ${EFFECTIVE_BANDWIDTH_LIMIT} }")
+        total_seconds=$(( download_seconds + install_seconds ))
+    fi
+
+    time_str=$(format_duration "$total_seconds")
+
+    if [ "$has_size" = true ]; then
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_ESTIMATE_WITH_SIZE" "$pkg_count" "$download_mb" "$time_str")"
+    else
+        # shellcheck disable=SC2059
+        log_info "$(printf "$MSG_ESTIMATE_NO_SIZE" "$pkg_count" "$time_str")"
+    fi
+}
+
 # Update für Debian/Ubuntu/Mint
 update_debian() {
     log_info "$MSG_UPDATE_START_DEBIAN"
@@ -2564,6 +2661,9 @@ detect_distro
 
 # Bandbreite messen und Limit setzen (v1.9.0)
 detect_bandwidth
+
+# Update-Zeitschätzung ausgeben (v1.9.0)
+estimate_update_time
 
 # NVIDIA-Kernel-Kompatibilität prüfen (VOR dem Update!)
 check_nvidia_compatibility

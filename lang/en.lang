@@ -262,6 +262,11 @@ MSG_BANDWIDTH_DETECTED="Measured bandwidth: %s KB/s - limit set to %s KB/s (%s%%
 MSG_BANDWIDTH_NO_CURL="curl not found - bandwidth measurement skipped"
 MSG_BANDWIDTH_NO_TRICKLE="No native bandwidth limit for %s - trickle not found, continuing without limit"
 MSG_APT_DIST_UPGRADE_FAILED="apt-get dist-upgrade failed"
+MSG_ESTIMATE_WITH_SIZE="Estimate: %d packages, ~%.0f MB - expected ~%s"
+MSG_ESTIMATE_NO_SIZE="Estimate: %d packages - expected ~%s"
+MSG_ESTIMATE_SECONDS="%d sec"
+MSG_ESTIMATE_MINUTES="%d min"
+MSG_ESTIMATE_HOURS="%d hr %d min"
 
 # Snap (v1.8.1)
 MSG_SNAP_CHECK="Checking snap packages..."
