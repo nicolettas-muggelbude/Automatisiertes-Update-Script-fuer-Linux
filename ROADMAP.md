@@ -795,6 +795,7 @@ Features werden priorisiert nach:
 - **v1.7.0** ✅ - Hooks & Automation (Pre/Post-Update Hooks) (Released: 2026-03-13)
 - **v1.8.0** ✅ - Backup-Integration & Load-Check (Released: 2026-04-04)
 - **v1.9.0** ✅ - Bandbreitenmessung, Zeitschätzung & Snap-Check (Released: 2026-04-18)
+- **v1.9.1** ✅ - fwupd Firmware-Updates & curl/wget Fallback (Released: 2026-04-27)
 - **v2.0.0** 🏗️ - **Major Refactoring** (modulare Architektur, Tests) — kein neuer Feature-Scope
 - **v3.0.0** 📋 - **Enterprise Features** (Container, Multi-System, Webhooks) — nur für Server/Power-User
 
@@ -806,4 +807,4 @@ Features werden priorisiert nach:
 | Refactoring | v2.0.0 | Alle — sauberes Fundament |
 | Enterprise | v3.0.0 | Server, Power-User |
 
-Letzte Aktualisierung: 2026-04-18
+Letzte Aktualisierung: 2026-04-27

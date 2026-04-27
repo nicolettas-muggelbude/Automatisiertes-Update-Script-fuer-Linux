@@ -19,6 +19,7 @@ Automated update script for various Linux distributions with optional email noti
 
 ## Features
 
+- ✅ **Firmware Updates**: Automatic firmware updates via fwupd (UEFI, SSDs, docks) (v1.9.1)
 - ✅ **Bandwidth Measurement & Limit**: Automatic measurement + intelligent limit before every update (v1.9.0)
 - ✅ **Update Time Estimate**: Package count, download size and expected duration before start (v1.9.0)
 - ✅ **Snap Check**: Automatically detects whether Snap updates are needed (v1.9.0)
@@ -1641,12 +1642,14 @@ For problems or questions:
 
 The complete version history can be found in the [CHANGELOG.md](CHANGELOG.md) file.
 
-### Current Version: 1.9.0 (2026-04-18) - Network & Progress
+### Current Version: 1.9.1 (2026-04-27) - fwupd & Bugfixes
 
 **Highlights:**
-- ✅ **NEW: Automatic Bandwidth Measurement** – measures before every update, sets intelligent limit
-- ✅ **NEW: Update Time Estimate** – package count, MB and expected duration
-- ✅ **NEW: Snap Check** – detects whether manual Snap updates are needed
+- ✅ **NEW: fwupd Firmware Updates** – UEFI, SSDs, docks via LVFS (opt-in)
+- ✅ **NEW: curl/wget Fallback** – works on Ubuntu 26.04 without pre-installed curl
+- ✅ Automatic bandwidth measurement (v1.9.0)
+- ✅ Update time estimate (v1.9.0)
+- ✅ Snap check (v1.9.0)
 - ✅ Backup Integration – LVM, Btrfs, ZFS, rsync (v1.8.0)
 - ✅ System Load Check (v1.8.0)
 - ✅ Hooks System – Pre/Post-Update hooks (v1.7.0)

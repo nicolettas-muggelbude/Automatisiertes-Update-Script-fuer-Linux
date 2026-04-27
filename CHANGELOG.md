@@ -7,6 +7,24 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-04-27
+
+### Hinzugefügt
+- **fwupd Firmware-Update Integration**: Optionale Firmware-Updates via fwupd (UEFI, SSDs, Docks etc.)
+  - `update_fwupd()` – aktualisiert Firmware über LVFS
+  - `install_fwupd()` – installiert fwupd automatisch wenn `ENABLE_FWUPD=true` gesetzt aber fwupd fehlt
+  - Exit-Code 2 von fwupdmgr wird korrekt als "keine Updates verfügbar" behandelt
+  - Unterstützt: Debian/Ubuntu/Mint, Fedora/RHEL, openSUSE, Arch, Void
+  - `ENABLE_FWUPD=false` (Standard, opt-in)
+  - 8 neue Sprachmeldungen (DE/EN)
+
+### Verbessert
+- **curl/wget Fallback für Bandbreitenmessung**: Ubuntu 26.04 hat curl nicht mehr als Standard
+  - Fallback-Kette: curl → wget → curl automatisch installieren → Messung überspringen
+  - `measure_speed_wget()` – Bandbreitenmessung via wget + timeout + wc -c
+  - `install_curl()` – installiert curl über distro-eigenen Paketmanager
+  - `MSG_BANDWIDTH_NO_CURL` durch 4 granulare Meldungen ersetzt
+
 ## [1.9.0] - 2026-04-18
 
 ### Hinzugefügt

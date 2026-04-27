@@ -4,9 +4,10 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.9.0 - Netzwerk & Fortschritt (Released: 2026-04-18)
+v1.9.1 - fwupd & Bugfixes (Released: 2026-04-27)
 
 ## Vorherige Versionen
+- v1.9.0 - Netzwerk & Fortschritt (Released: 2026-04-18)
 - v1.8.0 - Backup & Optimierung (Released: 2026-04-04)
 - v1.7.0 - Hooks & Automation (Released: 2026-03-13)
 - v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot (Released: 2026-01-25)

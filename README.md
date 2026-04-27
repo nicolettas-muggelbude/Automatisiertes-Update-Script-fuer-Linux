@@ -19,6 +19,7 @@ Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optiona
 
 ## Features
 
+- ✅ **Firmware-Updates**: Automatische Firmware-Updates via fwupd (UEFI, SSDs, Docks) (v1.9.1)
 - ✅ **Bandbreitenmessung & -limit**: Automatische Messung + intelligentes Limit vor jedem Update (v1.9.0)
 - ✅ **Update-Zeitschätzung**: Paketanzahl, Downloadgröße und voraussichtliche Dauer vor dem Start (v1.9.0)
 - ✅ **Snap-Check**: Erkennt automatisch ob Snap-Updates nötig sind (v1.9.0)
@@ -1641,12 +1642,14 @@ Bei Problemen oder Fragen:
 
 Die vollständige Versionshistorie findest du in der [CHANGELOG.md](CHANGELOG.md) Datei.
 
-### Aktuelle Version: 1.9.0 (2026-04-18) - Netzwerk & Fortschritt
+### Aktuelle Version: 1.9.1 (2026-04-27) - fwupd & Bugfixes
 
 **Highlights:**
-- ✅ **NEU: Automatische Bandbreitenmessung** – misst vor jedem Update, setzt intelligentes Limit
-- ✅ **NEU: Update-Zeitschätzung** – Paketanzahl, MB und voraussichtliche Dauer
-- ✅ **NEU: Snap-Check** – erkennt ob manuelle Snap-Updates nötig sind
+- ✅ **NEU: fwupd Firmware-Updates** – UEFI, SSDs, Docks via LVFS (opt-in)
+- ✅ **NEU: curl/wget Fallback** – funktioniert auf Ubuntu 26.04 ohne vorinstalliertes curl
+- ✅ Automatische Bandbreitenmessung (v1.9.0)
+- ✅ Update-Zeitschätzung (v1.9.0)
+- ✅ Snap-Check (v1.9.0)
 - ✅ Backup-Integration – LVM, Btrfs, ZFS, rsync (v1.8.0)
 - ✅ System-Last-Prüfung (v1.8.0)
 - ✅ Hook-System – Pre/Post-Update hooks (v1.7.0)
