@@ -4,25 +4,39 @@
 Linux System Update-Script mit Unterstützung für mehrere Distributionen (Debian, Ubuntu, RHEL, Fedora, SUSE, Solus, Arch, Void).
 
 ## Aktuelle Version
-v1.9.1 - fwupd & Bugfixes (Released: 2026-04-27)
+v2.0.0 - Major Refactoring (Released: 2026-05-14)
 
 ## Vorherige Versionen
+- v1.9.1 - fwupd & Bugfixes (Released: 2026-04-27)
 - v1.9.0 - Netzwerk & Fortschritt (Released: 2026-04-18)
 - v1.8.0 - Backup & Optimierung (Released: 2026-04-04)
 - v1.7.0 - Hooks & Automation (Released: 2026-03-13)
 - v1.6.0 - XDG-Konformität, Config-Migration & NVIDIA Secure Boot (Released: 2026-01-25)
 - v1.5.1 - Desktop-Benachrichtigungen & DMA (Released: 2025-12-27)
 - v1.5.0 - Upgrade-Check System (Released: 2025-12-27)
-- v1.4.0 - ShellCheck-Warnungen behoben, Kernel-Schutz implementiert
 
 ## Nächste Version
-v2.0.0 - Major Refactoring & Enterprise Features (geplant)
+v3.0.0 - Enterprise Features (geplant: Container, Multi-System, Webhooks)
 
 ## Projekt-Struktur
 ```
 Update-Script/
-├── update.sh              # Hauptscript
-├── config.conf            # Konfigurationsdatei
+├── update.sh              # Hauptscript (~140 Zeilen, Orchestrierung)
+├── lib/                   # Module (v2.0.0)
+│   ├── core.sh           # Basis: Config, Logging, Distro-Erkennung
+│   ├── notifications.sh  # E-Mail & Desktop
+│   ├── hooks.sh          # Pre/Post-Update Hooks
+│   ├── backup.sh         # Backup & Load-Check
+│   ├── kernel.sh         # Kernel-Schutz, NVIDIA, Secure Boot
+│   ├── upgrades.sh       # Upgrade-Check System
+│   ├── network.sh        # Bandbreite, Snap, fwupd
+│   └── distros.sh        # Paketmanager & Reboot-Check
+├── tests/                 # bats-Tests (v2.0.0)
+│   ├── test_core.bats
+│   ├── test_network.bats
+│   ├── test_kernel.bats
+│   ├── test_upgrades.bats
+│   └── run_tests.sh
 ├── lang/                  # Sprachdateien
 │   ├── de.lang           # Deutsch
 │   └── en.lang           # Englisch
@@ -463,10 +477,10 @@ Update-Script/
 Siehe ROADMAP.md für vollständige Details aller Versionen.
 
 ---
-Letzte Aktualisierung: 2026-01-25
-Aktuelle Version: v1.6.1 (In Entwicklung - Bugfixes)
-Vorherige Version: v1.6.0 (Released: 2026-01-25)
-Nächste Versionen: v1.7.0 → v1.8.0 → v2.0.0
+Letzte Aktualisierung: 2026-05-14
+Aktuelle Version: v2.0.0 (Released: 2026-05-14)
+Vorherige Version: v1.9.1 (Released: 2026-04-27)
+Nächste Version: v3.0.0 (Enterprise Features)
 
 ## Nächste Schritte (v1.6.1)
 

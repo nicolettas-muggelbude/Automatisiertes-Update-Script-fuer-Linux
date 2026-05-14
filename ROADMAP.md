@@ -693,7 +693,7 @@ v1.9.0 ist feature-complete für Desktop- und Heimanwender. Enterprise-Features 
 
 ## Version 2.0.0 - Major Refactoring
 
-**Status:** 📋 Konzeptphase
+**Status:** ✅ Implementiert (2026-05-14)
 
 ⚠️ **Kein neuer Feature-Scope.** v2.0.0 ist reines Code-Refactoring — gleiche Funktionen wie v1.9.0, aber modulare, testbare Architektur als Fundament für v3.0.0.
 
@@ -701,36 +701,39 @@ v1.9.0 ist feature-complete für Desktop- und Heimanwender. Enterprise-Features 
 
 ```
 update-script/
-├── update.sh              # Hauptscript (Orchestrierung)
-├── config.conf
+├── update.sh              # Hauptscript (~140 Zeilen, reine Orchestrierung)
 ├── lib/
-│   ├── core.sh           # Basis-Funktionen (logging, colors)
-│   ├── distros.sh        # Distribution-Updates
-│   ├── upgrades.sh       # Upgrade-Check System
-│   ├── kernel.sh         # Kernel-Schutz & NVIDIA
+│   ├── core.sh           # Basis: Farben, Config, Logging, Distro-Erkennung
 │   ├── notifications.sh  # E-Mail & Desktop-Notifications
 │   ├── hooks.sh          # Pre/Post-Update Hooks
-│   ├── backup.sh         # Backup-Integration
-│   └── network.sh        # Bandbreitenmessung & Snap
+│   ├── backup.sh         # Backup-Integration & Load-Check
+│   ├── kernel.sh         # Kernel-Schutz, NVIDIA & Secure Boot
+│   ├── upgrades.sh       # Upgrade-Check System
+│   ├── network.sh        # Bandbreitenmessung, Snap & fwupd
+│   └── distros.sh        # Paketmanager-Updates & Reboot-Check
 ├── lang/
 └── tests/
-    ├── test_core.sh
-    ├── test_distros.sh
-    └── test_network.sh
+    ├── test_core.bats
+    ├── test_network.bats
+    ├── test_kernel.bats
+    ├── test_upgrades.bats
+    └── run_tests.sh
 ```
 
 ### 🧪 Test-Framework
 
 - [bats-core](https://github.com/bats-core/bats-core) — Bash Automated Testing System
-- Ziel: >80% Test-Coverage
-- CI/CD für automatische Tests
+- Installation: `sudo apt install bats` oder via GitHub
+- Ausführung: `bash tests/run_tests.sh`
+- ShellCheck-Integration im Test-Runner
 
 ### 🔄 Migration
 
-- `update.sh` bleibt Haupteinstiegspunkt
-- `config.conf` Format bleibt kompatibel
-- Migration-Script: `migrate-to-v2.sh`
-- Support für v1.9.x: 6 Monate nach v2.0.0 Release
+- `update.sh` bleibt Haupteinstiegspunkt ✅
+- `config.conf` Format bleibt kompatibel ✅
+- ⚠️ **Breaking Change**: Legacy-Config `./config.conf` nicht mehr unterstützt
+  - Migration: `sudo cp ./config.conf /etc/linux-update-script/config.conf`
+- Support für v1.9.x: 6 Monate nach v2.0.0 Release (bis 2026-11-14)
 
 ---
 
@@ -796,7 +799,7 @@ Features werden priorisiert nach:
 - **v1.8.0** ✅ - Backup-Integration & Load-Check (Released: 2026-04-04)
 - **v1.9.0** ✅ - Bandbreitenmessung, Zeitschätzung & Snap-Check (Released: 2026-04-18)
 - **v1.9.1** ✅ - fwupd Firmware-Updates & curl/wget Fallback (Released: 2026-04-27)
-- **v2.0.0** 🏗️ - **Major Refactoring** (modulare Architektur, Tests) — kein neuer Feature-Scope
+- **v2.0.0** ✅ - **Major Refactoring** (modulare Architektur, Tests) (Released: 2026-05-14)
 - **v3.0.0** 📋 - **Enterprise Features** (Container, Multi-System, Webhooks) — nur für Server/Power-User
 
 ### Architektur-Strategie
@@ -807,4 +810,4 @@ Features werden priorisiert nach:
 | Refactoring | v2.0.0 | Alle — sauberes Fundament |
 | Enterprise | v3.0.0 | Server, Power-User |
 
-Letzte Aktualisierung: 2026-04-27
+Letzte Aktualisierung: 2026-05-14

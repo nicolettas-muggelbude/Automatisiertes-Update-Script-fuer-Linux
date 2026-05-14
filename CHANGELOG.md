@@ -7,6 +7,41 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-05-14
+
+### ⚠️ Breaking Changes
+- Legacy-Config `./config.conf` im Script-Verzeichnis wird nicht mehr unterstützt
+  - Nur noch: `/etc/linux-update-script/config.conf` (System) und `~/.config/linux-update-script/config.conf` (User)
+  - Migration: `sudo cp ./config.conf /etc/linux-update-script/config.conf`
+
+### Hinzugefügt
+- **Modulare Architektur**: Monolithisches Script (2914 Zeilen) in 8 Module aufgeteilt
+  - `lib/core.sh` — Basis: Farben, Config, Logging, Distro-Erkennung
+  - `lib/notifications.sh` — E-Mail & Desktop-Benachrichtigungen
+  - `lib/hooks.sh` — Pre/Post-Update Hook-System
+  - `lib/backup.sh` — Backup-Integration & System-Last-Prüfung
+  - `lib/kernel.sh` — Kernel-Schutz, NVIDIA-Kompatibilität & Secure Boot
+  - `lib/upgrades.sh` — Distribution-Upgrade-Check System
+  - `lib/network.sh` — Bandbreitenmessung, Spinner, Snap & fwupd
+  - `lib/distros.sh` — Paketmanager-Updates & Reboot-Check
+- **Test-Framework**: bats-Tests für alle Module
+  - `tests/test_core.bats` — Config-Loading, Logging, Sprache
+  - `tests/test_network.bats` — Bandbreite, Größen-Parser, Spinner
+  - `tests/test_kernel.bats` — NVIDIA-Erkennung, Secure Boot
+  - `tests/test_upgrades.bats` — Debian-Codenames, Upgrade-Checks
+  - `tests/run_tests.sh` — Test-Runner mit ShellCheck-Integration
+
+### Verbessert
+- `update.sh` von 2914 auf ~140 Zeilen reduziert (reine Orchestrierung)
+- Klare Modul-Grenzen erleichtern Wartung und Testing
+- `init_logging()` und `warn_config_status()` als eigene Funktionen in core.sh
+- `log_config_debug()` für Config-Debugging ins Log ausgelagert
+- ShellCheck: 0 Fehler, 0 Warnungen
+
+### Entfernt
+- `migrate_config()` — Legacy-Migration von `./config.conf` entfernt (war seit v1.6.1 deprecated)
+- `OLD_CONFIG_FILE` Variable und Legacy-Fallback
+
 ## [1.9.1] - 2026-04-27
 
 ### Hinzugefügt

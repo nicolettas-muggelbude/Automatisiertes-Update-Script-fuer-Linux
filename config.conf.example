@@ -81,6 +81,17 @@ NVIDIA_ALLOW_UNSUPPORTED_KERNEL=false
 NVIDIA_AUTO_MOK_SIGN=false
 
 # =============================================================
+# Firmware-Updates (v1.9.1)
+# =============================================================
+
+# Firmware-Updates via fwupd aktivieren (true/false)
+# Aktualisiert Firmware für UEFI, SSDs, Docks, Tastaturen etc. über LVFS
+# Voraussetzung: fwupd muss installiert sein (auf Desktop-Systemen oft vorinstalliert)
+# Standard: false - muss bewusst aktiviert werden
+# Hinweis: Manche Firmware-Updates erfordern einen Neustart
+ENABLE_FWUPD=false
+
+# =============================================================
 # Netzwerk & Fortschritt (v1.9.0)
 # =============================================================
 
