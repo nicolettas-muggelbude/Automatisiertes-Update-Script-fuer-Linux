@@ -1,5 +1,7 @@
 #!/bin/bash
 # lib/core.sh - Basis-Funktionen: Farben, Config, Logging, Distro-Erkennung
+# shellcheck disable=SC2034
+# Variablen werden in anderen lib/*.sh Modulen verwendet (cross-module)
 
 #############################################################
 # Farb-Codes
@@ -11,8 +13,6 @@ NC='\033[0m'
 
 #############################################################
 # Standard-Konfiguration (Defaults, werden durch Config überschrieben)
-# Variablen werden in anderen lib/*.sh Modulen genutzt - suppress SC2034
-# shellcheck disable=SC2034
 #############################################################
 ENABLE_EMAIL=false
 EMAIL_RECIPIENT=""
