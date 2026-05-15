@@ -8,6 +8,28 @@
 
 Automatisiertes Update-Script für verschiedene Linux-Distributionen mit optionaler E-Mail-Benachrichtigung und detailliertem Logging.
 
+## Schnellstart
+
+> **Wichtig:** Das Script benötigt das vollständige Repository — nicht nur `install.sh`.
+
+**Option A: Mit Git (empfohlen)**
+```bash
+git clone https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux.git linux-update-script
+cd linux-update-script
+./install.sh
+```
+
+**Option B: Als ZIP (ohne Git)**
+```bash
+wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/heads/main.zip
+unzip main.zip
+mv Automatisiertes-Update-Script-fuer-Linux-main linux-update-script
+cd linux-update-script
+./install.sh
+```
+
+---
+
 ## Unterstützte Distributionen
 
 - **Debian-basiert**: Debian, Ubuntu, Linux Mint

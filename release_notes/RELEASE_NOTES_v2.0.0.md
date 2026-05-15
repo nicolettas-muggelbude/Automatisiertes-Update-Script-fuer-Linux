@@ -4,9 +4,30 @@
 
 ## 💾 Downloads
 
-| Plattform | Download |
-|-----------|----------|
-| 🐧 **Linux** Installer | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/releases/download/v2.0.0/install.sh) |
+> **Hinweis:** `install.sh` benötigt das vollständige Repository und kann nicht alleine ausgeführt werden.
+
+| | Download |
+|---|---|
+| 📦 **Vollständiges Repository** (empfohlen) | [⬇ Source code (zip)](https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/tags/v2.0.0.zip) |
+| 🐧 **Installer** (nur aus dem geklonten/entpackten Repo ausführen) | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/releases/download/v2.0.0/install.sh) |
+
+### Schnellstart
+
+**Mit Git (empfohlen):**
+```bash
+git clone https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux.git linux-update-script
+cd linux-update-script
+./install.sh
+```
+
+**Mit ZIP (ohne Git):**
+```bash
+wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/tags/v2.0.0.zip
+unzip v2.0.0.zip
+mv Automatisiertes-Update-Script-fuer-Linux-2.0.0 linux-update-script
+cd linux-update-script
+./install.sh
+```
 
 ---
 
