@@ -26,6 +26,7 @@ wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer
 unzip v2.0.0.zip
 mv Automatisiertes-Update-Script-fuer-Linux-2.0.0 linux-update-script
 cd linux-update-script
+chmod +x install.sh
 ./install.sh
 ```
 

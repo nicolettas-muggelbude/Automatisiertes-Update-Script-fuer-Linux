@@ -25,6 +25,7 @@ wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer
 unzip main.zip
 mv Automatisiertes-Update-Script-fuer-Linux-main linux-update-script
 cd linux-update-script
+chmod +x install.sh
 ./install.sh
 ```
 
@@ -195,6 +196,7 @@ curl -L -o main.zip https://github.com/nicolettas-muggelbude/Automatisiertes-Upd
 unzip main.zip
 mv Automatisiertes-Update-Script-fuer-Linux-main linux-update-script
 cd linux-update-script
+chmod +x install.sh update.sh log-viewer.sh
 
 # ZIP-Datei aufräumen (optional)
 rm ~/main.zip
