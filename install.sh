@@ -16,6 +16,22 @@ NC='\033[0m' # No Color
 # Script-Verzeichnis
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Prüfen ob das vollständige Repository vorhanden ist
+if [ ! -f "${SCRIPT_DIR}/update.sh" ] || [ ! -d "${SCRIPT_DIR}/lang" ]; then
+    echo -e "${RED}FEHLER: Dieses Script muss aus dem vollständigen Repository ausgeführt werden.${NC}"
+    echo -e "${RED}ERROR: This script must be run from the complete repository.${NC}"
+    echo
+    echo "  Das Repository klonen / Clone the repository:"
+    echo
+    echo "  git clone https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux.git"
+    echo "  cd Automatisiertes-Update-Script-fuer-Linux"
+    echo "  sudo ./install.sh"
+    echo
+    echo "  Oder als ZIP herunterladen / Or download as ZIP:"
+    echo "  https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/heads/main.zip"
+    exit 1
+fi
+
 # Config-Pfade (Hybrid-System: v1.6.0+)
 # Primär: System-Config in /etc/
 SYSTEM_CONFIG_DIR="/etc/linux-update-script"
