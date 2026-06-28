@@ -19,7 +19,7 @@ cd linux-update-script
 ./install.sh
 ```
 
-**Option B: Als ZIP (ohne Git)**
+**Option B: Als ZIP (ohne Git)** 
 ```bash
 wget https://github.com/nicolettas-muggelbude/Automatisiertes-Update-Script-fuer-Linux/archive/refs/heads/main.zip
 unzip main.zip
