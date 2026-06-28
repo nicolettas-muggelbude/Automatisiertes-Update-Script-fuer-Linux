@@ -1433,13 +1433,13 @@ sudo dkms autoinstall
 sudo dkms autoinstall -k 6.5.0-35-generic
 ```
 
-## Bandbreitenmessung & -limitierung
+## Bandbreitenmessung & limitierung
 
 **NEU in v1.9.0:** Das Script misst vor jedem Update die verfügbare Netzwerkbandbreite und begrenzt den Download automatisch.
 
 ### Warum?
 
-Ohne Limit können Updates die gesamte Verbindung belegen – besonders auf Servern oder bei geteilten Verbindungen ein Problem. Das Script misst die aktuelle Bandbreite und setzt automatisch ein sinnvolles Limit (Standard: 80% der gemessenen Geschwindigkeit).
+Ohne Limit können Updates die gesamte Verbindung belegen - besonders auf Servern oder bei geteilten Verbindungen ein Problem. Das Script misst die aktuelle Bandbreite und setzt automatisch ein sinnvolles Limit (Standard: 80% der gemessenen Geschwindigkeit).
 
 ### 3 Modi
 
@@ -1591,7 +1591,7 @@ sudo apt-get install lvm2
 
 ### Anwendungsfall
 
-Nützlich auf Servern, die zu bestimmten Zeiten stark belastet sind – z.B. verhindert die Prüfung, dass ein Cron-Job-Update während Spitzenlast startet.
+Nützlich auf Servern, die zu bestimmten Zeiten stark belastet sind - z.B. verhindert die Prüfung, dass ein Cron-Job-Update während Spitzenlast startet.
 
 ### Konfiguration
 
@@ -1615,7 +1615,7 @@ UPDATE_MAX_LOAD="2.0"
 # [WARNUNG] System-Last zu hoch (3.4 > 2.0) - Update wird abgebrochen
 ```
 
-Bei zu hoher Last wird das Script mit Exit-Code 1 beendet – ein Cron-Job-Update wird beim nächsten geplanten Zeitpunkt erneut versucht.
+Bei zu hoher Last wird das Script mit Exit-Code 1 beendet - ein Cron-Job-Update wird beim nächsten geplanten Zeitpunkt erneut versucht.
 
 ---
 
